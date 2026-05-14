@@ -24,7 +24,8 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
 
   const users = (() => {
     try {
-      const saved = localStorage.getItem('maths-revision-users');
+      if (typeof window === 'undefined' || !window.localStorage) return [];
+      const saved = window.localStorage.getItem('maths-revision-users');
       const parsed = JSON.parse(saved || '[]');
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
@@ -32,7 +33,7 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
     }
   })();
   const filteredUsers = users.filter((u: any) => 
-    u.username.toLowerCase().includes(searchTerm.toLowerCase())
+    (u.username || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (!isAuthenticated) {
@@ -169,7 +170,7 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-slate-900/5 rounded-xl flex items-center justify-center font-bold text-slate-400 text-xs">
-                            {user.username.substring(0, 2).toUpperCase()}
+                            {(user.username || '??').substring(0, 2).toUpperCase()}
                           </div>
                           <div>
                             <div className="font-bold text-sm text-slate-900">{user.username}</div>

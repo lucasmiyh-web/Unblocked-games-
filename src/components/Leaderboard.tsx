@@ -5,7 +5,8 @@ import { Trophy, Medal, Crown, Star, Users } from 'lucide-react';
 export default function Leaderboard() {
   const users = (() => {
     try {
-      const saved = localStorage.getItem('maths-revision-users');
+      if (typeof window === 'undefined' || !window.localStorage) return [];
+      const saved = window.localStorage.getItem('maths-revision-users');
       const parsed = JSON.parse(saved || '[]');
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {

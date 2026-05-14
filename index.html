@@ -4,15 +4,30 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Maths Revision | Secure Gateway</title>
+    <script>
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+        var div = document.getElementById('error-display') || document.createElement('div');
+        div.id = 'error-display';
+        div.style = 'position:fixed; top:0; left:0; right:0; background:#991b1b; color:white; padding:15px; font-family:monospace; z-index:999999; font-size:12px; border-bottom:2px solid black;';
+        div.innerHTML = '<b>System Error Detected:</b><br>' + msg + '<br><small>Line: ' + lineNo + ' | ' + url + '</small>';
+        document.body.appendChild(div);
+        return false;
+      };
+    </script>
   </head>
   <body>
-    <div id="root">
-      <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0f172a; color: #94a3b8; font-family: sans-serif; gap: 1rem;">
-        <div style="font-size: 1.5rem; font-weight: 800; font-style: italic; color: white;">MATHS<span style="color: #3b82f6;">REVISION</span></div>
-        <div style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;">Initializing Secure Connection...</div>
-      </div>
-    </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      setTimeout(function() {
+        if (!document.getElementById('root').innerHTML) {
+          document.getElementById('root').innerHTML = '<div style="font-family:sans-serif; padding:20px; color:white; background:#0f172a; height:100vh; display:flex; align-items:center; justify-content:center; text-align:center;">' +
+            '<div><h1 style="margin:0; font-size:1.5rem;">System Load Failure</h1>' +
+            '<p style="color:#64748b; font-size:0.875rem; margin-top:10px;">The app is taking too long to start. This may be due to school restrictions or an outdated browser.</p>' +
+            '<button onclick="window.location.reload()" style="margin-top:20px; padding:10px 20px; border-radius:10px; border:none; background:white; color:#0f172a; font-weight:bold; cursor:pointer;">Retry</button></div></div>';
+        }
+      }, 5000);
+    </script>
   </body>
 </html>
 

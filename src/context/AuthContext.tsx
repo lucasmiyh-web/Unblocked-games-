@@ -19,26 +19,41 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Safe localStorage wrapper
 const safeStorage = {
-  getItem: (key: string) => {
+  getStorage: () => {
     try {
-      return localStorage.getItem(key);
+      if (typeof window !== 'undefined' && 'localStorage' in window && window.localStorage !== null) {
+        return window.localStorage;
+      }
     } catch (e) {
-      console.warn('Storage access failed:', e);
+      // Access denied
+    }
+    return null;
+  },
+  getItem: (key: string) => {
+    const storage = safeStorage.getStorage();
+    if (!storage) return null;
+    try {
+      return storage.getItem(key);
+    } catch (e) {
       return null;
     }
   },
   setItem: (key: string, value: string) => {
+    const storage = safeStorage.getStorage();
+    if (!storage) return;
     try {
-      localStorage.setItem(key, value);
+      storage.setItem(key, value);
     } catch (e) {
-      console.warn('Storage write failed:', e);
+      // Probably quota exceeded
     }
   },
   removeItem: (key: string) => {
+    const storage = safeStorage.getStorage();
+    if (!storage) return;
     try {
-      localStorage.removeItem(key);
+      storage.removeItem(key);
     } catch (e) {
-      console.warn('Storage delete failed:', e);
+      // Ignored
     }
   }
 };
