@@ -17,12 +17,38 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Safe localStorage wrapper
+const safeStorage = {
+  getItem: (key: string) => {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      console.warn('Storage access failed:', e);
+      return null;
+    }
+  },
+  setItem: (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn('Storage write failed:', e);
+    }
+  },
+  removeItem: (key: string) => {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn('Storage delete failed:', e);
+    }
+  }
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   // Load session
   useEffect(() => {
-    const savedSession = localStorage.getItem('maths-revision-session');
+    const savedSession = safeStorage.getItem('maths-revision-session');
     if (savedSession) {
       try {
         const parsed = JSON.parse(savedSession);
@@ -34,14 +60,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         }
       } catch (e) {
-        localStorage.removeItem('maths-revision-session');
+        safeStorage.removeItem('maths-revision-session');
       }
     }
   }, []);
 
   const login = (username: string, password: string) => {
     try {
-      const users = JSON.parse(localStorage.getItem('maths-revision-users') || '[]');
+      const usersStr = safeStorage.getItem('maths-revision-users') || '[]';
+      const users = JSON.parse(usersStr);
       if (!Array.isArray(users)) return false;
       const foundUser = users.find((u: any) => u.username === username && u.password === password);
       
@@ -52,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           playCount: typeof foundUser.playCount === 'number' ? foundUser.playCount : 0
         };
         setUser(sessionUser);
-        localStorage.setItem('maths-revision-session', JSON.stringify(sessionUser));
+        safeStorage.setItem('maths-revision-session', JSON.stringify(sessionUser));
         return true;
       }
     } catch (e) {
@@ -63,20 +90,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = (username: string, password: string) => {
     try {
-      const users = JSON.parse(localStorage.getItem('maths-revision-users') || '[]');
+      const usersStr = safeStorage.getItem('maths-revision-users') || '[]';
+      const users = JSON.parse(usersStr);
+      
       if (!Array.isArray(users)) {
-        localStorage.setItem('maths-revision-users', '[]');
+        safeStorage.setItem('maths-revision-users', '[]');
       }
+      
       if (Array.isArray(users) && users.find((u: any) => u.username === username)) return false;
 
       const newUser = { username, password, favorites: [], playCount: 0 };
       const updatedUsers = Array.isArray(users) ? [...users, newUser] : [newUser];
-      localStorage.setItem('maths-revision-users', JSON.stringify(updatedUsers));
+      safeStorage.setItem('maths-revision-users', JSON.stringify(updatedUsers));
       
       // Auto login
       const sessionUser = { username, favorites: [], playCount: 0 };
       setUser(sessionUser);
-      localStorage.setItem('maths-revision-session', JSON.stringify(sessionUser));
+      safeStorage.setItem('maths-revision-session', JSON.stringify(sessionUser));
       return true;
     } catch (e) {
       console.error(e);
@@ -86,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('maths-revision-session');
+    safeStorage.removeItem('maths-revision-session');
   };
 
   const toggleFavorite = (gameId: string) => {
@@ -98,14 +128,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const newUser = { ...user, favorites: newFavs };
     setUser(newUser);
-    localStorage.setItem('maths-revision-session', JSON.stringify(newUser));
+    safeStorage.setItem('maths-revision-session', JSON.stringify(newUser));
 
     // Update permanent storage
-    const users = JSON.parse(localStorage.getItem('maths-revision-users') || '[]');
-    const userIdx = users.findIndex((u: any) => u.username === user.username);
-    if (userIdx !== -1) {
-      users[userIdx].favorites = newFavs;
-      localStorage.setItem('maths-revision-users', JSON.stringify(users));
+    try {
+      const usersStr = safeStorage.getItem('maths-revision-users') || '[]';
+      const users = JSON.parse(usersStr);
+      const userIdx = users.findIndex((u: any) => u.username === user.username);
+      if (userIdx !== -1) {
+        users[userIdx].favorites = newFavs;
+        safeStorage.setItem('maths-revision-users', JSON.stringify(users));
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -115,14 +150,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const newCount = user.playCount + 1;
     const newUser = { ...user, playCount: newCount };
     setUser(newUser);
-    localStorage.setItem('maths-revision-session', JSON.stringify(newUser));
+    safeStorage.setItem('maths-revision-session', JSON.stringify(newUser));
 
     // Update permanent storage
-    const users = JSON.parse(localStorage.getItem('maths-revision-users') || '[]');
-    const userIdx = users.findIndex((u: any) => u.username === user.username);
-    if (userIdx !== -1) {
-      users[userIdx].playCount = newCount;
-      localStorage.setItem('maths-revision-users', JSON.stringify(users));
+    try {
+      const usersStr = safeStorage.getItem('maths-revision-users') || '[]';
+      const users = JSON.parse(usersStr);
+      const userIdx = users.findIndex((u: any) => u.username === user.username);
+      if (userIdx !== -1) {
+        users[userIdx].playCount = newCount;
+        safeStorage.setItem('maths-revision-users', JSON.stringify(users));
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 

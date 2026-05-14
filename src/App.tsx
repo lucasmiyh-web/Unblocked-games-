@@ -31,6 +31,51 @@ import AdminPortal from './components/AdminPortal';
 import Leaderboard from './components/Leaderboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
+// Simple Error Boundary to help diagnose school computer issues
+class ErrorBoundary extends React.Component<any, any> {
+  public state = { hasError: false, error: null };
+
+  public static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  public componentDidCatch(error: any, errorInfo: any) {
+    console.error("App Crash:", error, errorInfo);
+  }
+
+  public render() {
+    const { hasError, error } = this.state;
+    const { children } = (this as any).props;
+
+    if (hasError) {
+      return (
+        <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8 text-center">
+          <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mb-8">
+            <ShieldAlert className="w-10 h-10 text-red-500" />
+          </div>
+          <h1 className="text-3xl font-black text-white mb-4 uppercase tracking-tighter">System Malfunction</h1>
+          <p className="text-slate-400 mb-8 max-w-md font-medium">
+            The application encountered a critical error. This might be due to school network restrictions or disabled browser features.
+          </p>
+          <div className="bg-slate-950 p-6 rounded-2xl border border-white/5 w-full max-w-lg mb-8 overflow-auto">
+            <code className="text-pink-400 text-xs font-mono break-all">
+              {error?.message || "Unknown error"}
+            </code>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-8 py-4 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-widest hover:scale-105 transition-all"
+          >
+            Reboot System
+          </button>
+        </div>
+      );
+    }
+
+    return children;
+  }
+}
+
 function AppContent() {
   const [view, setView] = useState<'home' | 'game'>('home');
   const [activeGame, setActiveGame] = useState<Game | null>(null);
@@ -349,11 +394,14 @@ function AppContent() {
                     filteredGames.map((game, index) => (
                       <motion.div
                         key={game.id}
-                        layout
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.2, delay: Math.min(index * 0.05, 0.3) }}
-                        whileHover={{ y: -8 }}
+                        layout="position"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ 
+                          duration: 0.3, 
+                          delay: index < 12 ? index * 0.03 : 0 // Stagger only the first few to save CPU
+                        }}
+                        whileHover={{ y: -5 }}
                         onClick={() => handleStartGame(game)}
                         className="group bg-white p-8 rounded-3xl shadow-sm border border-slate-100 cursor-pointer overflow-hidden relative"
                       >
@@ -466,8 +514,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
