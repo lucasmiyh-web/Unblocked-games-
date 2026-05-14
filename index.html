@@ -8,8 +8,10 @@
       window.onerror = function(msg, url, lineNo, columnNo, error) {
         var div = document.getElementById('error-display') || document.createElement('div');
         div.id = 'error-display';
-        div.style = 'position:fixed; top:0; left:0; right:0; background:#991b1b; color:white; padding:15px; font-family:monospace; z-index:999999; font-size:12px; border-bottom:2px solid black;';
-        div.innerHTML = '<b>System Error Detected:</b><br>' + msg + '<br><small>Line: ' + lineNo + ' | ' + url + '</small>';
+        div.style = 'position:fixed; top:0; left:0; right:0; background:#991b1b; color:white; padding:15px; font-family:monospace; z-index:999999; font-size:11px; border-bottom:2px solid black;';
+        div.innerHTML = '<b>System Error:</b> ' + msg + '<br>' +
+                        '<small>Browser: ' + navigator.userAgent + '</small><br>' +
+                        '<small>Line: ' + lineNo + ' | ' + url + '</small>';
         document.body.appendChild(div);
         return false;
       };
@@ -17,16 +19,44 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="boot-status" style="position: fixed; inset: 0; background: #0f172a; color: white; display: flex; align-items: center; justify-content: center; font-family: sans-serif; z-index: 1000;">
+      <div style="text-align: center;">
+        <div style="font-size: 1.5rem; font-weight: 900; margin-bottom: 20px; letter-spacing: 0.1em;">MATHS REVISION</div>
+        <div id="boot-message" style="color: #64748b; font-size: 0.8rem; text-transform: uppercase;">Initializing Secure Gateway...</div>
+        <div id="boot-error" style="display: none; margin-top: 30px; padding: 20px; background: #991b1b; border-radius: 12px; max-width: 400px; text-align: left;">
+          <div style="font-weight: bold; margin-bottom: 10px;">SYSTEM BOOT ERROR</div>
+          <div id="error-details" style="font-family: monospace; font-size: 0.7rem; color: #fecaca; word-break: break-all;"></div>
+          <button onclick="window.location.reload()" style="margin-top: 20px; width: 100%; padding: 12px; border-radius: 8px; border: none; background: white; color: #991b1b; font-weight: bold; cursor: pointer;">RETRY SYSTEM</button>
+        </div>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.tsx"></script>
+    
     <script>
-      setTimeout(function() {
-        if (!document.getElementById('root').innerHTML) {
-          document.getElementById('root').innerHTML = '<div style="font-family:sans-serif; padding:20px; color:white; background:#0f172a; height:100vh; display:flex; align-items:center; justify-content:center; text-align:center;">' +
-            '<div><h1 style="margin:0; font-size:1.5rem;">System Load Failure</h1>' +
-            '<p style="color:#64748b; font-size:0.875rem; margin-top:10px;">The app is taking too long to start. This may be due to school restrictions or an outdated browser.</p>' +
-            '<button onclick="window.location.reload()" style="margin-top:20px; padding:10px 20px; border-radius:10px; border:none; background:white; color:#0f172a; font-weight:bold; cursor:pointer;">Retry</button></div></div>';
-        }
-      }, 5000);
+      // Monitoring script
+      window.addEventListener('load', function() {
+        console.log("Page Loaded");
+        setTimeout(function() {
+          var root = document.getElementById('root');
+          var bootStatus = document.getElementById('boot-status');
+          if (root && root.children.length > 0) {
+            console.log("App mounted successfully");
+            bootStatus.style.display = 'none';
+          } else {
+            console.warn("App failed to mount within timeout");
+            document.getElementById('boot-message').innerText = "Boot sequence stalled.";
+            document.getElementById('boot-error').style.display = 'block';
+            document.getElementById('error-details').innerText = "Reason: Application mount timeout. This often occurs when school computer security settings block essential JavaScript features.";
+          }
+        }, 10000);
+      });
+
+      window.onerror = function(msg, url, line, col, error) {
+        document.getElementById('boot-error').style.display = 'block';
+        document.getElementById('error-details').innerText = "Error: " + msg + "\nLine: " + line + "\nURL: " + url;
+        return false;
+      };
     </script>
   </body>
 </html>

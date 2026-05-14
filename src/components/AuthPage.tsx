@@ -39,15 +39,10 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      {/* Background Grid Pattern */}
       <div className="absolute inset-0 opacity-10 pointer-events-none" 
            style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #3B82F6 1px, transparent 0)', backgroundSize: '40px 40px' }} />
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
-      >
+      <div className="w-full max-w-md">
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/20">
@@ -63,7 +58,6 @@ export default function AuthPage() {
         </div>
 
         <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-700/50 relative">
-          {/* Decorative bar */}
           <div className="h-2 w-full bg-blue-600" />
           
           <form onSubmit={handleSubmit} className="p-10 space-y-6">
@@ -91,11 +85,7 @@ export default function AuthPage() {
               </div>
 
               {!isLogin && (
-                <motion.div 
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  className="relative"
-                >
+                <div className="relative">
                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input 
                     type="password" 
@@ -104,30 +94,22 @@ export default function AuthPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-100 outline-none transition-all font-medium placeholder:text-slate-400"
                   />
-                </motion.div>
+                </div>
               )}
             </div>
 
             {error && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-2 p-4 bg-red-50 text-red-600 rounded-xl text-xs font-bold uppercase"
-              >
+              <div className="flex items-center gap-2 p-4 bg-red-50 text-red-600 rounded-xl text-xs font-bold uppercase">
                 <AlertCircle className="w-4 h-4" />
                 {error}
-              </motion.div>
+              </div>
             )}
 
             {success && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-2 p-4 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold uppercase"
-              >
+              <div className="flex items-center gap-2 p-4 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold uppercase">
                 <CheckCircle2 className="w-4 h-4" />
                 {success}
-              </motion.div>
+              </div>
             )}
 
             <button 
@@ -154,7 +136,7 @@ export default function AuthPage() {
           Security Protocol 4.1.14 // mathsrevision.uk <br />
           Unauthorized access attempts are logged.
         </p>
-      </motion.div>
+      </div>
     </div>
   );
 }

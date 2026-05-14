@@ -1,12 +1,12 @@
 import React from 'react';
-import { motion } from 'motion/react';
 import { Trophy, Medal, Crown, Star, Users } from 'lucide-react';
+import { safeStorage } from '../lib/storage';
 
 export default function Leaderboard() {
+//...
   const users = (() => {
     try {
-      if (typeof window === 'undefined' || !window.localStorage) return [];
-      const saved = window.localStorage.getItem('maths-revision-users');
+      const saved = safeStorage.getItem('maths-revision-users');
       const parsed = JSON.parse(saved || '[]');
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
@@ -22,8 +22,8 @@ export default function Leaderboard() {
     <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm">
       <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Global Vanguard</h2>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Top Subject Efficiency Rankings</p>
+          <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Vanguard Ranks</h2>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Global System Integration Rankings</p>
         </div>
         <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100">
           <Trophy className="w-6 h-6 text-amber-500" />
@@ -34,15 +34,12 @@ export default function Leaderboard() {
         {topUsers.length === 0 ? (
           <div className="py-12 text-center text-slate-400">
             <Users className="w-12 h-12 mx-auto mb-4 opacity-20" />
-            <p className="text-xs font-bold uppercase tracking-widest">No active subjects recorded</p>
+            <p className="text-xs font-bold uppercase tracking-widest">No active players recorded</p>
           </div>
         ) : (
           <div className="space-y-2">
             {topUsers.map((user: any, index) => (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
+              <div
                 key={user.username}
                 className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
                   index === 0 
@@ -63,7 +60,7 @@ export default function Leaderboard() {
                   </div>
                   <div>
                     <div className="font-bold text-slate-900">{user.username}</div>
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Specialist</div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Player</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -75,7 +72,7 @@ export default function Leaderboard() {
                     <Star className="w-4 h-4 text-blue-500" />
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         )}

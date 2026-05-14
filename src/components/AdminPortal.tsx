@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
 import { ShieldCheck, Users, Lock, X, Search, User, ShieldAlert } from 'lucide-react';
+import { safeStorage } from '../lib/storage';
 
 interface AdminPortalProps {
   onClose: () => void;
@@ -24,8 +24,7 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
 
   const users = (() => {
     try {
-      if (typeof window === 'undefined' || !window.localStorage) return [];
-      const saved = window.localStorage.getItem('maths-revision-users');
+      const saved = safeStorage.getItem('maths-revision-users');
       const parsed = JSON.parse(saved || '[]');
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
@@ -39,12 +38,7 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
   if (!isAuthenticated) {
     return (
       <div key="admin-login" className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-4">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          className="w-full max-w-md bg-white rounded-[2.5rem] p-10 shadow-2xl overflow-hidden"
-        >
+        <div className="w-full max-w-md bg-white rounded-[2.5rem] p-10 shadow-2xl overflow-hidden">
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center">
               <Lock className="w-8 h-8 text-red-600" />
@@ -85,7 +79,7 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
               </button>
             </div>
           </form>
-        </motion.div>
+        </div>
       </div>
     );
   }
@@ -188,7 +182,7 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                           <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Database Record Valid</span>
                         </div>
                       </td>

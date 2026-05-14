@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { safeStorage } from '../lib/storage';
 
 interface User {
   username: string;
@@ -17,55 +18,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Safe localStorage wrapper
-const safeStorage = {
-  getStorage: () => {
-    try {
-      if (typeof window !== 'undefined' && 'localStorage' in window && window.localStorage !== null) {
-        return window.localStorage;
-      }
-    } catch (e) {
-      // Access denied
-    }
-    return null;
-  },
-  getItem: (key: string) => {
-    const storage = safeStorage.getStorage();
-    if (!storage) return null;
-    try {
-      return storage.getItem(key);
-    } catch (e) {
-      return null;
-    }
-  },
-  setItem: (key: string, value: string) => {
-    const storage = safeStorage.getStorage();
-    if (!storage) return;
-    try {
-      storage.setItem(key, value);
-    } catch (e) {
-      // Probably quota exceeded
-    }
-  },
-  removeItem: (key: string) => {
-    const storage = safeStorage.getStorage();
-    if (!storage) return;
-    try {
-      storage.removeItem(key);
-    } catch (e) {
-      // Ignored
-    }
-  }
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   // Load session
   useEffect(() => {
-    const savedSession = safeStorage.getItem('maths-revision-session');
-    if (savedSession) {
-      try {
+    try {
+      const savedSession = safeStorage.getItem('maths-revision-session');
+      if (savedSession) {
         const parsed = JSON.parse(savedSession);
         if (parsed && typeof parsed === 'object') {
           setUser({
@@ -74,9 +34,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             playCount: typeof parsed.playCount === 'number' ? parsed.playCount : 0
           });
         }
-      } catch (e) {
-        safeStorage.removeItem('maths-revision-session');
       }
+    } catch (e) {
+      safeStorage.removeItem('maths-revision-session');
     }
   }, []);
 
@@ -98,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return true;
       }
     } catch (e) {
-      console.error(e);
+      console.error("Login Error:", e);
     }
     return false;
   };
@@ -106,16 +66,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = (username: string, password: string) => {
     try {
       const usersStr = safeStorage.getItem('maths-revision-users') || '[]';
-      const users = JSON.parse(usersStr);
-      
-      if (!Array.isArray(users)) {
-        safeStorage.setItem('maths-revision-users', '[]');
+      let users: any[];
+      try {
+        users = JSON.parse(usersStr);
+      } catch (e) {
+        users = [];
       }
       
-      if (Array.isArray(users) && users.find((u: any) => u.username === username)) return false;
+      if (!Array.isArray(users)) {
+        users = [];
+      }
+      
+      if (users.find((u: any) => u.username === username)) return false;
 
       const newUser = { username, password, favorites: [], playCount: 0 };
-      const updatedUsers = Array.isArray(users) ? [...users, newUser] : [newUser];
+      const updatedUsers = [...users, newUser];
       safeStorage.setItem('maths-revision-users', JSON.stringify(updatedUsers));
       
       // Auto login
@@ -124,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       safeStorage.setItem('maths-revision-session', JSON.stringify(sessionUser));
       return true;
     } catch (e) {
-      console.error(e);
+      console.error("Register Error:", e);
     }
     return false;
   };

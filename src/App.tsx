@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { 
   Calculator, 
   BookOpen, 
@@ -23,7 +22,8 @@ import {
   Filter,
   ShieldAlert,
   User,
-  Maximize2
+  Maximize2,
+  Gamepad2
 } from 'lucide-react';
 import { GAMES, Game, CATEGORIES } from './constants';
 import AuthPage from './components/AuthPage';
@@ -31,53 +31,64 @@ import AdminPortal from './components/AdminPortal';
 import Leaderboard from './components/Leaderboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
-// Simple Error Boundary to help diagnose school computer issues
-class ErrorBoundary extends React.Component<any, any> {
-  public state = { hasError: false, error: null };
+// Game Imports
+import HyperSlither from './games/HyperSlither';
+import CyberStack from './games/CyberStack';
+import NeonRunner from './games/NeonRunner';
+import RetroSnake from './games/RetroSnake';
 
-  public static getDerivedStateFromError(error: any) {
-    return { hasError: true, error };
-  }
-
-  public componentDidCatch(error: any, errorInfo: any) {
-    console.error("App Crash:", error, errorInfo);
-  }
-
-  public render() {
-    const { hasError, error } = this.state;
-    const { children } = (this as any).props;
-
-    if (hasError) {
-      return (
-        <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8 text-center">
-          <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mb-8">
-            <ShieldAlert className="w-10 h-10 text-red-500" />
-          </div>
-          <h1 className="text-3xl font-black text-white mb-4 uppercase tracking-tighter">System Malfunction</h1>
-          <p className="text-slate-400 mb-8 max-w-md font-medium">
-            The application encountered a critical error. This might be due to school network restrictions or disabled browser features.
-          </p>
-          <div className="bg-slate-950 p-6 rounded-2xl border border-white/5 w-full max-w-lg mb-8 overflow-auto">
-            <code className="text-pink-400 text-xs font-mono break-all">
-              {error?.message || "Unknown error"}
-            </code>
-          </div>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-8 py-4 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-widest hover:scale-105 transition-all"
-          >
-            Reboot System
-          </button>
-        </div>
-      );
-    }
-
-    return children;
-  }
+function ErrorFallback({ error }: { error: any }) {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#0f172a',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem',
+      textAlign: 'center',
+      color: 'white',
+      fontFamily: 'sans-serif'
+    }}>
+      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+      <h1 style={{ fontSize: '1.5rem', marginBottom: '1rem', textTransform: 'uppercase' }}>System Error</h1>
+      <p style={{ color: '#94a3b8', marginBottom: '1.5rem', maxWidth: '400px' }}>
+        The application failed to load correctly. This may be due to browser restrictions.
+      </p>
+      <div style={{ 
+        backgroundColor: '#000', 
+        padding: '1rem', 
+        borderRadius: '0.5rem', 
+        fontSize: '0.75rem', 
+        fontFamily: 'monospace',
+        wordBreak: 'break-all',
+        marginBottom: '2rem',
+        maxWidth: '100%'
+      }}>
+        {error?.message || String(error)}
+      </div>
+      <button 
+        onClick={() => window.location.reload()}
+        style={{
+          padding: '0.75rem 1.5rem',
+          backgroundColor: 'white',
+          color: '#0f172a',
+          border: 'none',
+          borderRadius: '0.75rem',
+          fontWeight: '900',
+          cursor: 'pointer'
+        }}
+      >
+        RETRY CONNECTION
+      </button>
+    </div>
+  );
 }
 
 function AppContent() {
   const [view, setView] = useState<'home' | 'game'>('home');
+// ...
   const [activeGame, setActiveGame] = useState<Game | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -123,7 +134,7 @@ function AppContent() {
   };
 
   const handlePanic = () => {
-    window.location.href = 'https://senecalearning.com';
+    window.location.href = 'https://www.google.com';
   };
 
   const toggleFullscreen = () => {
@@ -187,6 +198,55 @@ function AppContent() {
   const renderGame = () => {
     if (!activeGame) return null;
 
+    if (activeGame.isInternal) {
+      return (
+        <div 
+          ref={gameContainerRef}
+          className={`
+            transition-all duration-300 ease-in-out
+            ${isFullscreen 
+              ? 'fixed inset-0 z-[9999] bg-slate-950 flex flex-col' 
+              : 'w-full aspect-video bg-slate-900 rounded-3xl overflow-hidden shadow-2xl relative'}
+          `}
+        >
+          {isFullscreen && (
+            <div className="bg-slate-900/80 backdrop-blur-md border-b border-white/10 px-6 py-3 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3">
+                <activeGame.icon className="w-5 h-5 text-blue-400" />
+                <span className="text-white font-bold text-sm uppercase tracking-wider">{activeGame.name}</span>
+              </div>
+              <button 
+                onClick={toggleFullscreen}
+                className="p-2 text-white/60 hover:text-white transition-colors"
+                title="Exit Fullscreen"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+          
+          <div className="w-full h-full">
+            {activeGame.id === 'hyperslither' && <HyperSlither />}
+            {activeGame.id === 'cyberstack' && <CyberStack />}
+            {activeGame.id === 'neonrunner' && <NeonRunner />}
+            {activeGame.id === 'retrosnake' && <RetroSnake />}
+          </div>
+          
+          {!isFullscreen && (
+            <div className="absolute bottom-6 right-6 z-30 flex gap-2">
+              <button
+                onClick={toggleFullscreen}
+                className="p-3 bg-white/10 backdrop-blur-md text-white rounded-xl hover:bg-white/20 transition-all active:scale-95 border border-white/20 shadow-xl"
+                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              >
+                <Maximize2 className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     if (activeGame.url) {
       return (
         <div 
@@ -244,7 +304,6 @@ function AppContent() {
         </div>
       );
     }
-
     return (
       <div className="py-20 text-center">
         <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -258,11 +317,9 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
-      <AnimatePresence>
-        {isAdminOpen && (
-          <AdminPortal onClose={() => setIsAdminOpen(false)} />
-        )}
-      </AnimatePresence>
+      {isAdminOpen && (
+        <AdminPortal onClose={() => setIsAdminOpen(false)} />
+      )}
 
       {!user ? (
         <div className="relative">
@@ -286,10 +343,10 @@ function AppContent() {
               onClick={() => setView('home')}
             >
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-200">
-                <Calculator className="w-5 h-5 text-white" />
+                <Gamepad2 className="w-5 h-5 text-white" />
               </div>
               <span className="font-bold text-xl tracking-tight text-slate-900 uppercase italic">
-                Maths<span className="text-blue-600">Revision</span>
+                Game<span className="text-blue-600">Hub</span>
               </span>
             </div>
 
@@ -332,22 +389,15 @@ function AppContent() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <AnimatePresence mode="wait">
           {view === 'home' ? (
-            <motion.div
-              key="home"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-            >
+            <div key="home">
               {/* Search and Filters */}
               <div className="flex flex-col gap-8 mb-12">
                 <div className="relative max-w-2xl mx-auto w-full">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input 
                     type="text" 
-                    placeholder="Search studies..."
+                    placeholder="Search systems..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-3xl shadow-sm focus:ring-2 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-400 font-medium"
@@ -392,18 +442,10 @@ function AppContent() {
                 <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                   {filteredGames.length > 0 ? (
                     filteredGames.map((game, index) => (
-                      <motion.div
+                      <div
                         key={game.id}
-                        layout="position"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ 
-                          duration: 0.3, 
-                          delay: index < 12 ? index * 0.03 : 0 // Stagger only the first few to save CPU
-                        }}
-                        whileHover={{ y: -5 }}
                         onClick={() => handleStartGame(game)}
-                        className="group bg-white p-8 rounded-3xl shadow-sm border border-slate-100 cursor-pointer overflow-hidden relative"
+                        className="group bg-white p-8 rounded-3xl shadow-sm border border-slate-100 cursor-pointer overflow-hidden relative transition-transform hover:-translate-y-1"
                       >
                         <button 
                           onClick={(e) => handleToggleFavorite(e, game.id)}
@@ -430,7 +472,7 @@ function AppContent() {
                             Play Now <ArrowRight className="w-4 h-4" />
                           </button>
                         </div>
-                      </motion.div>
+                      </div>
                     ))
                   ) : (
                     <div className="col-span-full py-20 text-center">
@@ -447,29 +489,26 @@ function AppContent() {
                   <Leaderboard />
                 </div>
               </div>
-            </motion.div>
+            </div>
           ) : (
-            <motion.div
+            <div
               key="game"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
               className="max-w-4xl mx-auto"
             >
               <div className="flex justify-between items-center mb-8">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    {activeGame && <activeGame.icon className="w-6 h-6 text-blue-600" />}
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-bold text-slate-900">{activeGame?.name}</h2>
-                    <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest">
-                      <span>{activeGame?.category}</span>
-                      <span>•</span>
-                      <span>{activeGame?.mathTopic}</span>
-                    </div>
-                  </div>
-                </div>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                          {activeGame && <activeGame.icon className="w-6 h-6 text-blue-600" />}
+                        </div>
+                        <div>
+                          <h2 className="text-3xl font-bold text-slate-900">{activeGame?.name}</h2>
+                          <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest">
+                            <span>{activeGame?.category}</span>
+                            <span>•</span>
+                            <span>{activeGame?.systemCore}</span>
+                          </div>
+                        </div>
+                      </div>
                 <button
                   onClick={() => setView('home')}
                   className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
@@ -481,17 +520,16 @@ function AppContent() {
               <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100">
                 {renderGame()}
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
       </main>
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-12 mt-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
-            <Calculator className="w-6 h-6 text-blue-600" />
-            <span className="font-bold text-lg tracking-tight uppercase italic">Maths<span className="text-blue-600">Revision</span></span>
+            <Gamepad2 className="w-6 h-6 text-blue-600" />
+            <span className="font-bold text-lg tracking-tight uppercase italic">Game<span className="text-blue-600">Hub</span></span>
           </div>
           <div className="flex items-center gap-6">
             <button 
@@ -501,7 +539,7 @@ function AppContent() {
               System Management
             </button>
             <div className="text-xs text-slate-400 font-bold uppercase tracking-tighter">
-              © 2026 MathsRevision
+              © 2026 GameHub
             </div>
           </div>
         </div>
@@ -514,10 +552,8 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </ErrorBoundary>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
