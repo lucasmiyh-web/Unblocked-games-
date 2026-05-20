@@ -44,6 +44,7 @@ import BitShift from './games/BitShift';
 import VoltRacing from './games/VoltRacing';
 import GhostProtocol from './games/GhostProtocol';
 import CryptoClimb from './games/CryptoClimb';
+import BasketballStars from './games/BasketballStars';
 import GenericGame from './components/GenericGame';
 import MathRevision from './components/MathRevision';
 
@@ -279,6 +280,7 @@ function AppContent() {
            activeGame.id === 'voltracing' ? <VoltRacing /> :
            activeGame.id === 'ghostprotocol' ? <GhostProtocol /> :
            activeGame.id === 'cryptoclimb' ? <CryptoClimb /> :
+           activeGame.id === 'basketballstars' ? <BasketballStars /> :
            activeGame.url ? (
              <iframe 
                src={activeGame.url} 

@@ -267,12 +267,12 @@ export const GAMES: Game[] = [
     isInternal: true
   },
   {
-    id: 'volleyslam',
-    name: 'Volley Slam',
+    id: 'basketballstars',
+    name: 'Basketball Stars',
     category: 'Arcade',
-    description: 'Ping-pong battle with the advanced firewall AI.',
+    description: 'Throw epic shots from dynamic spots on the court, unlock wild flame streaks, and master the perfect swish!',
     icon: Volleyball,
-    systemCore: 'Collision Physics v1.5',
+    systemCore: '3D Physics Engine v1.0',
     isInternal: true
   },
   {
