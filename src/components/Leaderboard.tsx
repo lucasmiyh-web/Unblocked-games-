@@ -1,22 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trophy, Medal, Crown, Star, Users } from 'lucide-react';
-import { safeStorage } from '../lib/storage';
+import { db } from '../lib/firebase';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 export default function Leaderboard() {
-//...
-  const users = (() => {
-    try {
-      const saved = safeStorage.getItem('maths-revision-users');
-      const parsed = JSON.parse(saved || '[]');
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
-    }
-  })();
+  const [loading, setLoading] = useState(true);
+  const [topUsers, setTopUsers] = useState<any[]>([]);
 
-  const topUsers = [...users]
-    .sort((a: any, b: any) => (b.playCount || 0) - (a.playCount || 0))
-    .slice(0, 10);
+  useEffect(() => {
+    const q = query(
+      collection(db, 'users'), 
+      orderBy('playCount', 'desc'), 
+      limit(10)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const users = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setTopUsers(users);
+      setLoading(false);
+    }, (error) => {
+      console.error("Leaderboard Error:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 h-64 flex flex-col items-center justify-center gap-4">
+        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Updating Vanguard...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm">
@@ -40,7 +60,7 @@ export default function Leaderboard() {
           <div className="space-y-2">
             {topUsers.map((user: any, index) => (
               <div
-                key={user.username}
+                key={user.username || user.id}
                 className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
                   index === 0 
                   ? 'bg-amber-50 border-amber-100' 

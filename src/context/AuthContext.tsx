@@ -1,95 +1,191 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { safeStorage } from '../lib/storage';
+import { db, auth } from '../lib/firebase';
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc 
+} from 'firebase/firestore';
+import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 interface User {
   username: string;
   favorites: string[];
   playCount: number;
+  lastLogin?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => boolean;
-  register: (username: string, password: string) => boolean;
+  login: (username: string, password: string) => Promise<boolean>;
+  register: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  toggleFavorite: (gameId: string) => void;
-  recordPlay: () => void;
+  toggleFavorite: (gameId: string) => Promise<void>;
+  recordPlay: () => Promise<void>;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Load session
+  // Load session and sync with Firebase Auth
   useEffect(() => {
-    try {
-      const savedSession = safeStorage.getItem('maths-revision-session');
-      if (savedSession) {
-        const parsed = JSON.parse(savedSession);
-        if (parsed && typeof parsed === 'object') {
-          setUser({
-            username: parsed.username || 'Anonymous',
-            favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
-            playCount: typeof parsed.playCount === 'number' ? parsed.playCount : 0
-          });
+    let fired = false;
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Only run the init logic once
+      if (fired) return;
+      fired = true;
+
+      try {
+        const savedSession = safeStorage.getItem('maths-revision-session');
+        if (savedSession) {
+          const parsed = JSON.parse(savedSession);
+          if (parsed && parsed.username) {
+            const userRef = doc(db, 'users', parsed.username);
+            // Add a timeout to the initial check to prevent infinite loading
+            const checkPromise = getDoc(userRef);
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout')), 10000)
+            );
+            
+            const userSnap = await Promise.race([checkPromise, timeoutPromise]) as any;
+            if (userSnap.exists()) {
+              const data = userSnap.data();
+              setUser({
+                username: data.username,
+                favorites: data.favorites || [],
+                playCount: data.playCount || 0,
+                lastLogin: data.lastLogin
+              });
+            } else {
+              safeStorage.removeItem('maths-revision-session');
+              setUser(null);
+            }
+          }
         }
+      } catch (e) {
+        console.warn("Auth Init sync failed:", e);
+      } finally {
+        setLoading(false);
       }
-    } catch (e) {
-      safeStorage.removeItem('maths-revision-session');
+    });
+
+    // Attempt anonymous sign-in in the background
+    if (!auth.currentUser) {
+      signInAnonymously(auth).catch(e => console.warn("Anon Auth failed:", e));
     }
+
+    return () => unsubscribe();
   }, []);
 
-  const login = (username: string, password: string) => {
+  const login = async (username: string, password: string) => {
+    const path = `users/${username}`;
     try {
-      const usersStr = safeStorage.getItem('maths-revision-users') || '[]';
-      const users = JSON.parse(usersStr);
-      if (!Array.isArray(users)) return false;
-      const foundUser = users.find((u: any) => u.username === username && u.password === password);
+      const userRef = doc(db, 'users', username);
+      const userSnap = await getDoc(userRef);
       
-      if (foundUser) {
-        const sessionUser = { 
-          username: foundUser.username, 
-          favorites: Array.isArray(foundUser.favorites) ? foundUser.favorites : [],
-          playCount: typeof foundUser.playCount === 'number' ? foundUser.playCount : 0
-        };
-        setUser(sessionUser);
-        safeStorage.setItem('maths-revision-session', JSON.stringify(sessionUser));
-        return true;
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.password === password) {
+          const lastLogin = new Date().toISOString();
+          
+          await updateDoc(userRef, { lastLogin });
+          console.log(`User logged in via Firestore: ${username}`);
+          
+          const sessionUser = { 
+            username: userData.username, 
+            favorites: userData.favorites || [],
+            playCount: userData.playCount || 0,
+            lastLogin
+          };
+
+          setUser(sessionUser);
+          safeStorage.setItem('maths-revision-session', JSON.stringify(sessionUser));
+          return true;
+        }
       }
-    } catch (e) {
-      console.error("Login Error:", e);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, path);
     }
     return false;
   };
 
-  const register = (username: string, password: string) => {
+  const register = async (username: string, password: string) => {
+    const path = `users/${username}`;
     try {
-      const usersStr = safeStorage.getItem('maths-revision-users') || '[]';
-      let users: any[];
-      try {
-        users = JSON.parse(usersStr);
-      } catch (e) {
-        users = [];
-      }
+      const userRef = doc(db, 'users', username);
+      const userSnap = await getDoc(userRef);
       
-      if (!Array.isArray(users)) {
-        users = [];
-      }
-      
-      if (users.find((u: any) => u.username === username)) return false;
+      if (userSnap.exists()) return false;
 
-      const newUser = { username, password, favorites: [], playCount: 0 };
-      const updatedUsers = [...users, newUser];
-      safeStorage.setItem('maths-revision-users', JSON.stringify(updatedUsers));
+      const lastLogin = new Date().toISOString();
+      const newUser = { 
+        username, 
+        password, 
+        favorites: [], 
+        playCount: 0,
+        lastLogin
+      };
+
+      await setDoc(userRef, newUser);
+      console.log(`User registered in Firestore: ${username}`);
+      try {
+        await signInAnonymously(auth);
+      } catch (e) {
+        console.warn("Silent sign-in failed during registration", e);
+      }
+
+      const sessionUser = { 
+        username, 
+        favorites: [], 
+        playCount: 0,
+        lastLogin
+      };
       
-      // Auto login
-      const sessionUser = { username, favorites: [], playCount: 0 };
       setUser(sessionUser);
       safeStorage.setItem('maths-revision-session', JSON.stringify(sessionUser));
       return true;
-    } catch (e) {
-      console.error("Register Error:", e);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
     }
     return false;
   };
@@ -97,57 +193,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null);
     safeStorage.removeItem('maths-revision-session');
+    auth.signOut();
   };
 
-  const toggleFavorite = (gameId: string) => {
+  const toggleFavorite = async (gameId: string) => {
     if (!user) return;
     
     const newFavs = user.favorites.includes(gameId)
       ? user.favorites.filter(id => id !== gameId)
       : [...user.favorites, gameId];
     
-    const newUser = { ...user, favorites: newFavs };
-    setUser(newUser);
-    safeStorage.setItem('maths-revision-session', JSON.stringify(newUser));
-
-    // Update permanent storage
+    const path = `users/${user.username}`;
     try {
-      const usersStr = safeStorage.getItem('maths-revision-users') || '[]';
-      const users = JSON.parse(usersStr);
-      const userIdx = users.findIndex((u: any) => u.username === user.username);
-      if (userIdx !== -1) {
-        users[userIdx].favorites = newFavs;
-        safeStorage.setItem('maths-revision-users', JSON.stringify(users));
-      }
-    } catch (e) {
-      console.error(e);
+      const userRef = doc(db, 'users', user.username);
+      await updateDoc(userRef, { favorites: newFavs });
+      
+      const newUser = { ...user, favorites: newFavs };
+      setUser(newUser);
+      safeStorage.setItem('maths-revision-session', JSON.stringify(newUser));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, path);
     }
   };
 
-  const recordPlay = () => {
+  const recordPlay = async () => {
     if (!user) return;
     
     const newCount = user.playCount + 1;
-    const newUser = { ...user, playCount: newCount };
-    setUser(newUser);
-    safeStorage.setItem('maths-revision-session', JSON.stringify(newUser));
-
-    // Update permanent storage
+    const path = `users/${user.username}`;
     try {
-      const usersStr = safeStorage.getItem('maths-revision-users') || '[]';
-      const users = JSON.parse(usersStr);
-      const userIdx = users.findIndex((u: any) => u.username === user.username);
-      if (userIdx !== -1) {
-        users[userIdx].playCount = newCount;
-        safeStorage.setItem('maths-revision-users', JSON.stringify(users));
-      }
-    } catch (e) {
-      console.error(e);
+      const userRef = doc(db, 'users', user.username);
+      await updateDoc(userRef, { playCount: newCount });
+      
+      const newUser = { ...user, playCount: newCount };
+      setUser(newUser);
+      safeStorage.setItem('maths-revision-session', JSON.stringify(newUser));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, path);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, toggleFavorite, recordPlay }}>
+    <AuthContext.Provider value={{ user, login, register, logout, toggleFavorite, recordPlay, loading }}>
       {children}
     </AuthContext.Provider>
   );

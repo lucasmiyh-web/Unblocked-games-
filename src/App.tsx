@@ -36,6 +36,16 @@ import HyperSlither from './games/HyperSlither';
 import CyberStack from './games/CyberStack';
 import NeonRunner from './games/NeonRunner';
 import RetroSnake from './games/RetroSnake';
+import StarDefender from './games/StarDefender';
+import MemoryMatrix from './games/MemoryMatrix';
+import GravityCube from './games/GravityCube';
+import VoidShot from './games/VoidShot';
+import BitShift from './games/BitShift';
+import VoltRacing from './games/VoltRacing';
+import GhostProtocol from './games/GhostProtocol';
+import CryptoClimb from './games/CryptoClimb';
+import GenericGame from './components/GenericGame';
+import MathRevision from './components/MathRevision';
 
 function ErrorFallback({ error }: { error: any }) {
   return (
@@ -95,13 +105,19 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isCloaked, setIsCloaked] = useState(false);
   
   const gameContainerRef = React.useRef<HTMLDivElement>(null);
   
-  const { user, logout, toggleFavorite, recordPlay } = useAuth();
+  const { user, logout, toggleFavorite, recordPlay, loading } = useAuth();
 
   const userFavorites = useMemo(() => user?.favorites || [], [user]);
   
+  useEffect(() => {
+    (window as any).toggleCloak = () => setIsCloaked(prev => !prev);
+    return () => { delete (window as any).toggleCloak; };
+  }, []);
+
   const filteredGames = useMemo(() => {
     if (!user) return [];
     return GAMES.filter(game => {
@@ -182,6 +198,9 @@ function AppContent() {
       if (e.key === 'Escape' && isFullscreen) {
         toggleFullscreen();
       }
+      if (e.key === '`') {
+        setIsCloaked(prev => !prev);
+      }
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -195,104 +214,96 @@ function AppContent() {
     };
   }, [isFullscreen]);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-6 max-w-sm text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div>
+            <div className="text-white text-sm font-black uppercase tracking-[0.2em] mb-2 animate-pulse">Initializing Systems...</div>
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest leading-relaxed">
+              Connecting to secure registry. If this takes too long, check your connection.
+            </p>
+          </div>
+          
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10"
+          >
+            Force Reload
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const renderGame = () => {
     if (!activeGame) return null;
 
-    if (activeGame.isInternal) {
-      return (
-        <div 
-          ref={gameContainerRef}
-          className={`
-            transition-all duration-300 ease-in-out
-            ${isFullscreen 
-              ? 'fixed inset-0 z-[9999] bg-slate-950 flex flex-col' 
-              : 'w-full aspect-video bg-slate-900 rounded-3xl overflow-hidden shadow-2xl relative'}
-          `}
-        >
-          {isFullscreen && (
-            <div className="bg-slate-900/80 backdrop-blur-md border-b border-white/10 px-6 py-3 flex justify-between items-center shrink-0">
-              <div className="flex items-center gap-3">
-                <activeGame.icon className="w-5 h-5 text-blue-400" />
-                <span className="text-white font-bold text-sm uppercase tracking-wider">{activeGame.name}</span>
-              </div>
-              <button 
-                onClick={toggleFullscreen}
-                className="p-2 text-white/60 hover:text-white transition-colors"
-                title="Exit Fullscreen"
-              >
-                <X className="w-5 h-5" />
-              </button>
+    return (
+      <div 
+        ref={gameContainerRef}
+        className={`
+          transition-all duration-300 ease-in-out
+          ${isFullscreen 
+            ? 'fixed inset-0 z-[9999] bg-slate-950 flex flex-col' 
+            : 'w-full aspect-video bg-slate-900 rounded-3xl overflow-hidden shadow-2xl relative'}
+        `}
+      >
+        {isFullscreen && (
+          <div className="bg-slate-900/80 backdrop-blur-md border-b border-white/10 px-6 py-3 flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-3">
+              <activeGame.icon className="w-5 h-5 text-blue-400" />
+              <span className="text-white font-bold text-sm uppercase tracking-wider">{activeGame.name}</span>
             </div>
-          )}
-          
-          <div className="w-full h-full">
-            {activeGame.id === 'hyperslither' && <HyperSlither />}
-            {activeGame.id === 'cyberstack' && <CyberStack />}
-            {activeGame.id === 'neonrunner' && <NeonRunner />}
-            {activeGame.id === 'retrosnake' && <RetroSnake />}
-          </div>
-          
-          {!isFullscreen && (
-            <div className="absolute bottom-6 right-6 z-30 flex gap-2">
-              <button
-                onClick={toggleFullscreen}
-                className="p-3 bg-white/10 backdrop-blur-md text-white rounded-xl hover:bg-white/20 transition-all active:scale-95 border border-white/20 shadow-xl"
-                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-              >
-                <Maximize2 className="w-5 h-5" />
-              </button>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    if (activeGame.url) {
-      return (
-        <div 
-          ref={gameContainerRef}
-          className={`
-            transition-all duration-300 ease-in-out
-            ${isFullscreen 
-              ? 'fixed inset-0 z-[9999] bg-slate-950 flex flex-col' 
-              : 'w-full aspect-video bg-slate-900 rounded-3xl overflow-hidden shadow-2xl relative'}
-          `}
-        >
-          {isFullscreen && (
-            <div className="bg-slate-900/80 backdrop-blur-md border-b border-white/10 px-6 py-3 flex justify-between items-center shrink-0">
-              <div className="flex items-center gap-3">
-                <activeGame.icon className="w-5 h-5 text-blue-400" />
-                <span className="text-white font-bold text-sm uppercase tracking-wider">{activeGame.name}</span>
-              </div>
-              <button 
-                onClick={toggleFullscreen}
-                className="p-2 text-white/60 hover:text-white transition-colors"
-                title="Exit Fullscreen"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          )}
-          
-          <iframe 
-            src={activeGame.url} 
-            className={`${isFullscreen ? 'flex-1' : 'absolute inset-0'} w-full h-full border-none`}
-            allow="autoplay; fullscreen; keyboard; gamepad"
-            title={activeGame.name}
-            referrerPolicy="no-referrer"
-          />
-          
-          <div className={`absolute bottom-6 right-6 z-30 flex gap-2 ${isFullscreen ? 'opacity-0 hover:opacity-100 transition-opacity duration-300' : ''}`}>
-            <a
-              href={activeGame.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-3 bg-white/10 backdrop-blur-md text-white rounded-xl hover:bg-white/20 transition-all active:scale-95 border border-white/20 shadow-xl flex items-center gap-2"
-              title="Open in New Tab"
+            <button 
+              onClick={toggleFullscreen}
+              className="p-2 text-white/60 hover:text-white transition-colors"
+              title="Exit Fullscreen"
             >
-              <ExternalLink className="w-5 h-5" />
-              <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Open in Hub</span>
-            </a>
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+        
+        <div className="w-full h-full">
+          {activeGame.id === 'hyperslither' ? <HyperSlither /> :
+           activeGame.id === 'cyberstack' ? <CyberStack /> :
+           activeGame.id === 'neonrunner' ? <NeonRunner /> :
+           activeGame.id === 'retrosnake' ? <RetroSnake /> :
+           activeGame.id === 'stardefender' ? <StarDefender /> :
+           activeGame.id === 'memorymatrix' ? <MemoryMatrix /> :
+           activeGame.id === 'gravitycube' ? <GravityCube /> :
+           activeGame.id === 'voidshot' ? <VoidShot /> :
+           activeGame.id === 'bitshift' ? <BitShift /> :
+           activeGame.id === 'voltracing' ? <VoltRacing /> :
+           activeGame.id === 'ghostprotocol' ? <GhostProtocol /> :
+           activeGame.id === 'cryptoclimb' ? <CryptoClimb /> :
+           activeGame.url ? (
+             <iframe 
+               src={activeGame.url} 
+               className="w-full h-full border-none"
+               allow="autoplay; fullscreen; keyboard; gamepad"
+               title={activeGame.name}
+               referrerPolicy="no-referrer"
+             />
+           ) : <GenericGame game={activeGame} />}
+        </div>
+        
+        {!isFullscreen && (
+          <div className="absolute bottom-6 right-6 z-30 flex gap-2">
+            {activeGame.url && (
+              <a
+                href={activeGame.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-3 bg-white/10 backdrop-blur-md text-white rounded-xl hover:bg-white/20 transition-all active:scale-95 border border-white/20 shadow-xl flex items-center gap-2"
+                title="Open in New Tab"
+              >
+                <ExternalLink className="w-5 h-5" />
+                <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">External Hub</span>
+              </a>
+            )}
             <button
               onClick={toggleFullscreen}
               className="p-3 bg-white/10 backdrop-blur-md text-white rounded-xl hover:bg-white/20 transition-all active:scale-95 border border-white/20 shadow-xl"
@@ -301,19 +312,15 @@ function AppContent() {
               <Maximize2 className="w-5 h-5" />
             </button>
           </div>
-        </div>
-      );
-    }
-    return (
-      <div className="py-20 text-center">
-        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <BookOpen className="w-6 h-6 text-slate-400" />
-        </div>
-        <h3 className="text-xl font-bold text-slate-900 mb-1">Module Offline</h3>
-        <p className="text-slate-500 font-medium">This module is currently unavailable.</p>
+        )}
       </div>
     );
   };
+
+
+  if (isCloaked) {
+    return <MathRevision />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
@@ -362,6 +369,14 @@ function AppContent() {
                 <User className="w-4 h-4 text-slate-400" />
                 <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">{user.username}</span>
               </div>
+              <button 
+                onClick={() => setIsCloaked(true)}
+                className="hidden lg:flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-indigo-100 transition-all active:scale-95"
+                title="Toggle Study Cloak (Hotkey: `)"
+              >
+                <BookOpen className="w-4 h-4" />
+                Study Mode
+              </button>
               <button 
                 onClick={logout}
                 className="p-2 text-slate-400 hover:text-red-500 transition-colors"

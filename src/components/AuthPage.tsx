@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Shield, Key, User, Calculator, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Shield, Key, User, ArrowRight, AlertCircle, CheckCircle2, Gamepad2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function AuthPage() {
@@ -13,7 +13,7 @@ export default function AuthPage() {
   
   const { login, register } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -23,17 +23,21 @@ export default function AuthPage() {
       return;
     }
 
-    if (isLogin) {
-      const success = login(username, password);
-      if (!success) setError('Invalid username or credential token.');
-    } else {
-      if (password !== confirmPassword) {
-        setError('Credentials do not match the secondary verification.');
-        return;
+    try {
+      if (isLogin) {
+        const success = await login(username, password);
+        if (!success) setError('Invalid username or credential token.');
+      } else {
+        if (password !== confirmPassword) {
+          setError('Credentials do not match the secondary verification.');
+          return;
+        }
+        const success = await register(username, password);
+        if (!success) setError('Identification string already registered in database.');
+        else setSuccess('Identification successfully committed to remote registry.');
       }
-      const success = register(username, password);
-      if (!success) setError('Identification string already registered in database.');
-      else setSuccess('Identification successfully committed to registry.');
+    } catch (e: any) {
+      setError('System connection failure. Please retry.');
     }
   };
 
@@ -46,14 +50,14 @@ export default function AuthPage() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/20">
-              <Calculator className="w-7 h-7 text-white" />
+              <Gamepad2 className="w-7 h-7 text-white" />
             </div>
             <span className="font-black text-3xl tracking-tighter text-white uppercase italic">
-              Maths<span className="text-blue-500">Revision</span>
+              Game<span className="text-blue-500">Hub</span>
             </span>
           </div>
           <h2 className="text-slate-400 font-bold uppercase tracking-[0.2em] text-xs">
-            Student Access Gateway
+            Integrated Access Gateway
           </h2>
         </div>
 
@@ -124,7 +128,7 @@ export default function AuthPage() {
               <button 
                 type="button"
                 onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess(''); }}
-                className="text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors"
+                className="text-sm font-black text-red-600 uppercase tracking-widest hover:text-red-700 transition-colors"
               >
                 {isLogin ? 'No Registry? Create Identification' : 'Return to Access Gateway'}
               </button>
@@ -133,7 +137,7 @@ export default function AuthPage() {
         </div>
 
         <p className="mt-8 text-center text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
-          Security Protocol 4.1.14 // mathsrevision.uk <br />
+          Security Protocol 4.1.14 // gamehub.net <br />
           Unauthorized access attempts are logged.
         </p>
       </div>

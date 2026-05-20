@@ -12,6 +12,16 @@ interface Food {
   color: string;
 }
 
+interface Snake {
+  id: string;
+  points: Point[];
+  angle: number;
+  speed: number;
+  color: string;
+  isAI: boolean;
+  name: string;
+}
+
 export default function HyperSlither() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
@@ -19,15 +29,18 @@ export default function HyperSlither() {
   const [highScore, setHighScore] = useState(0);
 
   const gameState = useRef({
-    snake: [] as Point[],
-    angle: 0,
-    speed: 3,
+    player: {
+      points: [] as Point[],
+      angle: 0,
+      speed: 3,
+      color: '#3b82f6'
+    },
+    aiSnakes: [] as Snake[],
     food: [] as Food[],
-    width: 2000,
-    height: 2000,
+    width: 3000,
+    height: 3000,
     camera: { x: 0, y: 0 },
-    lastTime: 0,
-    playerName: "Player 1"
+    lastTime: 0
   });
 
   const mousePos = useRef({ x: 0, y: 0 });
@@ -39,30 +52,52 @@ export default function HyperSlither() {
   }, []);
 
   const initGame = () => {
-    const startX = 1000;
-    const startY = 1000;
-    gameState.current.snake = [];
+    const startX = 1500;
+    const startY = 1500;
+    gameState.current.player.points = [];
     for (let i = 0; i < 20; i++) {
-      gameState.current.snake.push({ x: startX - i * 5, y: startY });
+      gameState.current.player.points.push({ x: startX - i * 5, y: startY });
     }
-    gameState.current.food = Array.from({ length: 100 }, createFood);
-    gameState.current.speed = 3;
+    gameState.current.player.angle = 0;
+    gameState.current.food = Array.from({ length: 200 }, createFood);
+    
+    // Init AI Snakes
+    gameState.current.aiSnakes = Array.from({ length: 8 }, (_, i) => createAISnake(`ai-${i}`));
+    
     setScore(0);
     setGameOver(false);
   };
 
-  function createFood(): Food {
+  function createFood(x?: number, y?: number, size?: number): Food {
     return {
-      x: Math.random() * gameState.current.width,
-      y: Math.random() * gameState.current.height,
-      size: Math.random() * 5 + 3,
+      x: x ?? Math.random() * gameState.current.width,
+      y: y ?? Math.random() * gameState.current.height,
+      size: size ?? Math.random() * 5 + 3,
       color: `hsl(${Math.random() * 360}, 70%, 60%)`
+    };
+  }
+
+  function createAISnake(id: string): Snake {
+    const x = Math.random() * gameState.current.width;
+    const y = Math.random() * gameState.current.height;
+    const points: Point[] = [];
+    for (let i = 0; i < 20; i++) {
+      points.push({ x: x - i * 5, y });
+    }
+    return {
+      id,
+      points,
+      angle: Math.random() * Math.PI * 2,
+      speed: 2.5 + Math.random(),
+      color: `hsl(${Math.random() * 360}, 80%, 50%)`,
+      isAI: true,
+      name: `Entity_${id.split('-')[1]}`
     };
   }
 
   const gameLoop = (time: number) => {
     if (!gameState.current.lastTime) gameState.current.lastTime = time;
-    const dt = (time - gameState.current.lastTime) / 16;
+    const dt = Math.min((time - gameState.current.lastTime) / 16, 2);
     gameState.current.lastTime = time;
 
     update(dt);
@@ -73,51 +108,137 @@ export default function HyperSlither() {
   const update = (dt: number) => {
     if (gameOver) return;
 
-    const head = gameState.current.snake[0];
+    const { player, aiSnakes, food, width, height } = gameState.current;
+
+    // Player Update
+    const head = player.points[0];
     const dx = mousePos.current.x - window.innerWidth / 2;
     const dy = mousePos.current.y - window.innerHeight / 2;
     const targetAngle = Math.atan2(dy, dx);
     
-    // Smooth angle rotation
-    let angleDiff = targetAngle - gameState.current.angle;
+    let angleDiff = targetAngle - player.angle;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-    gameState.current.angle += angleDiff * 0.1 * dt;
+    player.angle += angleDiff * 0.1 * dt;
 
     const newHead = {
-      x: head.x + Math.cos(gameState.current.angle) * gameState.current.speed * dt,
-      y: head.y + Math.sin(gameState.current.angle) * gameState.current.speed * dt
+      x: head.x + Math.cos(player.angle) * player.speed * dt,
+      y: head.y + Math.sin(player.angle) * player.speed * dt
     };
 
-    // Boundary check
-    if (newHead.x < 0 || newHead.x > gameState.current.width || newHead.y < 0 || newHead.y > gameState.current.height) {
+    // AI Updates
+    aiSnakes.forEach(ai => {
+      const aiHead = ai.points[0];
+      
+      // Simple AI logic: Head towards nearest food or away from player if too close
+      let aiTargetX = width / 2;
+      let aiTargetY = height / 2;
+      
+      // Find nearest food
+      let minDist = 1000000;
+      food.forEach(f => {
+        const d = Math.hypot(aiHead.x - f.x, aiHead.y - f.y);
+        if (d < minDist) {
+          minDist = d;
+          aiTargetX = f.x;
+          aiTargetY = f.y;
+        }
+      });
+
+      // Avoid player
+      const distToPlayer = Math.hypot(aiHead.x - newHead.x, aiHead.y - newHead.y);
+      if (distToPlayer < 100) {
+        aiTargetX = aiHead.x + (aiHead.x - newHead.x);
+        aiTargetY = aiHead.y + (aiHead.y - newHead.y);
+      }
+
+      const aiTargetAngle = Math.atan2(aiTargetY - aiHead.y, aiTargetX - aiHead.x);
+      let aiAngleDiff = aiTargetAngle - ai.angle;
+      while (aiAngleDiff < -Math.PI) aiAngleDiff += Math.PI * 2;
+      while (aiAngleDiff > Math.PI) aiAngleDiff -= Math.PI * 2;
+      ai.angle += aiAngleDiff * 0.05 * dt;
+
+      const aiNewHead = {
+        x: aiHead.x + Math.cos(ai.angle) * ai.speed * dt,
+        y: aiHead.y + Math.sin(ai.angle) * ai.speed * dt
+      };
+
+      // AI Boundary wrap
+      if (aiNewHead.x < 0) aiNewHead.x = width;
+      if (aiNewHead.x > width) aiNewHead.x = 0;
+      if (aiNewHead.y < 0) aiNewHead.y = height;
+      if (aiNewHead.y > height) aiNewHead.y = 0;
+
+      ai.points = [aiNewHead, ...ai.points.slice(0, -1)];
+
+      // AI Collisions with Player body
+      player.points.forEach((p, i) => {
+        if (i > 5) {
+          const d = Math.hypot(aiNewHead.x - p.x, aiNewHead.y - p.y);
+          if (d < 20) {
+            // AI Dies - turn to food
+            ai.points.forEach((pt, j) => {
+              if (j % 5 === 0) food.push(createFood(pt.x, pt.y, 8));
+            });
+            Object.assign(ai, createAISnake(ai.id));
+          }
+        }
+      });
+    });
+
+    // Player Death checks
+    // 1. Boundary
+    if (newHead.x < 0 || newHead.x > width || newHead.y < 0 || newHead.y > height) {
       setGameOver(true);
       if (score > highScore) setHighScore(score);
       return;
     }
 
-    // Check food collision
-    gameState.current.food = gameState.current.food.filter(f => {
+    // 2. Collision with AI bodies
+    aiSnakes.forEach(ai => {
+      ai.points.forEach(p => {
+        const d = Math.hypot(newHead.x - p.x, newHead.y - p.y);
+        if (d < 20) {
+          setGameOver(true);
+          if (score > highScore) setHighScore(score);
+        }
+      });
+    });
+
+    // Update Player body
+    player.points = [newHead, ...player.points.slice(0, -1)];
+
+    // Food collision for player
+    gameState.current.food = food.filter(f => {
       const dist = Math.hypot(newHead.x - f.x, newHead.y - f.y);
       if (dist < f.size + 15) {
         setScore(s => s + Math.floor(f.size));
-        // Grow snake slightly
         for(let i=0; i<3; i++) {
-          const last = gameState.current.snake[gameState.current.snake.length - 1];
-          gameState.current.snake.push({ ...last });
+          player.points.push({ ...player.points[player.points.length-1] });
         }
         return false;
       }
       return true;
     });
 
-    if (gameState.current.food.length < 100) {
+    // Food collision for AI
+    aiSnakes.forEach(ai => {
+      const aiHead = ai.points[0];
+      gameState.current.food = gameState.current.food.filter(f => {
+        const dist = Math.hypot(aiHead.x - f.x, aiHead.y - f.y);
+        if (dist < f.size + 15) {
+          for(let i=0; i<2; i++) {
+            ai.points.push({ ...ai.points[ai.points.length-1] });
+          }
+          return false;
+        }
+        return true;
+      });
+    });
+
+    if (gameState.current.food.length < 200) {
       gameState.current.food.push(createFood());
     }
-
-    // Update snake body
-    const newSnake = [newHead, ...gameState.current.snake.slice(0, -1)];
-    gameState.current.snake = newSnake;
 
     // Update camera
     gameState.current.camera.x = newHead.x - window.innerWidth / 2;
@@ -135,31 +256,29 @@ export default function HyperSlither() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const { camera, snake, food, width, height } = gameState.current;
+    const { camera, player, food, width, height, aiSnakes } = gameState.current;
+
+    // Background pattern
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw Grid
     ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = 1;
-    const gridSize = 100;
-    const startX = Math.floor(camera.x / gridSize) * gridSize;
-    const startY = Math.floor(camera.y / gridSize) * gridSize;
+    const gridSize = 150;
+    const offX = -camera.x % gridSize;
+    const offY = -camera.y % gridSize;
 
-    for (let x = startX - camera.x; x < canvas.width; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.stroke();
+    for (let x = offX; x < canvas.width; x += gridSize) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
     }
-    for (let y = startY - camera.y; y < canvas.height; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
+    for (let y = offY; y < canvas.height; y += gridSize) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
     }
 
     // Draw Boundary
     ctx.strokeStyle = '#ef4444';
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 10;
     ctx.strokeRect(-camera.x, -camera.y, width, height);
 
     // Draw Food
@@ -170,21 +289,40 @@ export default function HyperSlither() {
       ctx.fill();
     });
 
-    // Draw Snake
+    // Draw AI Snakes
+    aiSnakes.forEach(ai => {
+      ctx.lineWidth = 15;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = ai.color;
+      ctx.beginPath();
+      ai.points.forEach((p, i) => {
+        if (i === 0) ctx.moveTo(p.x - camera.x, p.y - camera.y);
+        else ctx.lineTo(p.x - camera.x, p.y - camera.y);
+      });
+      ctx.stroke();
+      
+      // AI Name
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = 'bold 10px Inter';
+      ctx.textAlign = 'center';
+      ctx.fillText(ai.name, ai.points[0].x - camera.x, ai.points[0].y - camera.y - 20);
+    });
+
+    // Draw Player
     ctx.lineWidth = 20;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#3b82f6';
-    
+    ctx.strokeStyle = player.color;
     ctx.beginPath();
-    snake.forEach((p, i) => {
+    player.points.forEach((p, i) => {
       if (i === 0) ctx.moveTo(p.x - camera.x, p.y - camera.y);
       else ctx.lineTo(p.x - camera.x, p.y - camera.y);
     });
     ctx.stroke();
 
     // Draw Head
-    const head = snake[0];
+    const head = player.points[0];
     ctx.fillStyle = '#60a5fa';
     ctx.beginPath();
     ctx.arc(head.x - camera.x, head.y - camera.y, 12, 0, Math.PI * 2);
@@ -193,11 +331,10 @@ export default function HyperSlither() {
     // Eyes
     ctx.fillStyle = 'white';
     const eyeOffset = 6;
-    const eyeX1 = head.x - camera.x + Math.cos(gameState.current.angle + 0.5) * eyeOffset;
-    const eyeY1 = head.y - camera.y + Math.sin(gameState.current.angle + 0.5) * eyeOffset;
-    const eyeX2 = head.x - camera.x + Math.cos(gameState.current.angle - 0.5) * eyeOffset;
-    const eyeY2 = head.y - camera.y + Math.sin(gameState.current.angle - 0.5) * eyeOffset;
-    
+    const eyeX1 = head.x - camera.x + Math.cos(player.angle + 0.5) * eyeOffset;
+    const eyeY1 = head.y - camera.y + Math.sin(player.angle + 0.5) * eyeOffset;
+    const eyeX2 = head.x - camera.x + Math.cos(player.angle - 0.5) * eyeOffset;
+    const eyeY2 = head.y - camera.y + Math.sin(player.angle - 0.5) * eyeOffset;
     ctx.beginPath(); ctx.arc(eyeX1, eyeY1, 3, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(eyeX2, eyeY2, 3, 0, Math.PI * 2); ctx.fill();
   };

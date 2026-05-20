@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reuseable helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'lucasmiyh123@gmail.com';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUser(data) {
+      return data.username is string && data.username.size() <= 64 &&
+             data.password is string && data.password.size() <= 128;
+    }
+
+    match /users/{userId} {
+      allow get: if true;
+      allow list: if true; // Allow admin panel to list users without Google Auth
+      allow create: if true; // Allow registration
+      allow update: if true; // Allow login timestamp updates and favorites
+      allow delete: if true; // Allow admin panel to purge users
+    }
+
+    // Default deny for other paths if added later
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

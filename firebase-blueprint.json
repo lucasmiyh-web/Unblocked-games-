@@ -1,0 +1,39 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the GameHub portal.",
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "Unique username"
+        },
+        "password": {
+          "type": "string",
+          "description": "User password (plain text as requested for admin view)"
+        },
+        "favorites": {
+          "type": "array",
+          "description": "List of favorite game IDs"
+        },
+        "playCount": {
+          "type": "number",
+          "description": "Total number of games played"
+        },
+        "lastLogin": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last login timestamp"
+        }
+      },
+      "required": ["username", "password"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Collection of users indexed by their unique username or auth UID."
+    }
+  }
+}

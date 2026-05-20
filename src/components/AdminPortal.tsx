@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Users, Lock, X, Search, User, ShieldAlert } from 'lucide-react';
-import { safeStorage } from '../lib/storage';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Users, Lock, X, Search, ShieldAlert } from 'lucide-react';
+import { db } from '../lib/firebase';
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
 interface AdminPortalProps {
   onClose: () => void;
@@ -11,6 +12,41 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    setError('');
+    console.log("Admin: Fetching users from Firestore...");
+    try {
+      const usersRef = collection(db, 'users');
+      // Add a timeout for the fetch
+      const fetchPromise = getDocs(usersRef);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection Timeout')), 8000)
+      );
+      
+      const querySnapshot = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      const fetchedUsers = querySnapshot.docs.map((doc: any) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log(`Admin: Successfully fetched ${fetchedUsers.length} users`);
+      setUsers(fetchedUsers);
+    } catch (e: any) {
+      console.error("Admin: Error fetching users:", e);
+      setError(`Access Error: ${e.message || 'Unknown failure'}. Check database connection.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchUsers();
+    }
+  }, [isAuthenticated]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,15 +58,18 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
     }
   };
 
-  const users = (() => {
-    try {
-      const saved = safeStorage.getItem('maths-revision-users');
-      const parsed = JSON.parse(saved || '[]');
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
+  const handlePurge = async (username: string) => {
+    if (confirm(`Purge all data for ${username}?`)) {
+      try {
+        await deleteDoc(doc(db, 'users', username));
+        fetchUsers();
+      } catch (e) {
+        console.error("Error purging user:", e);
+        alert("Failed to purge user record.");
+      }
     }
-  })();
+  };
+
   const filteredUsers = users.filter((u: any) => 
     (u.username || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -135,7 +174,16 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
 
           <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
             <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row gap-4 justify-between items-center">
-              <h2 className="text-lg font-black text-slate-900 uppercase italic">User Database</h2>
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg font-black text-slate-900 uppercase italic">User Database</h2>
+                <button 
+                  onClick={fetchUsers}
+                  disabled={loading}
+                  className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Syncing...' : 'Sync Registry'}
+                </button>
+              </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
@@ -154,46 +202,73 @@ export default function AdminPortal({ onClose }: AdminPortalProps) {
                   <tr>
                     <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Subject Identity</th>
                     <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Access Credentials</th>
-                    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">User Status</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Connection Status</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Temporal Log</th>
                     <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Management</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredUsers.map((user: any, idx: number) => (
-                    <tr key={user.username || idx} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-slate-900/5 rounded-xl flex items-center justify-center font-bold text-slate-400 text-xs">
-                            {(user.username || '??').substring(0, 2).toUpperCase()}
+                  {filteredUsers.map((user: any, idx: number) => {
+                    const isOnline = user.lastLogin && 
+                      (new Date().getTime() - new Date(user.lastLogin).getTime() < 300000); // Online if active in last 5 mins
+                    
+                    return (
+                      <tr key={user.username || idx} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-slate-900/5 rounded-xl flex items-center justify-center font-bold text-slate-400 text-xs text-center">
+                              {(user.username || '??').substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-bold text-sm text-slate-900">{user.username}</div>
+                              <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Internal Subject ID</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-bold text-sm text-slate-900">{user.username}</div>
-                            <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Internal Subject ID</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest">Password</span>
+                            </div>
+                            <span className="text-xs font-bold text-slate-900 font-mono tracking-wider bg-slate-100 px-2 py-1 rounded-md inline-block w-fit">{user.password}</span>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-widest">Password</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-1.5 h-1.5 ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'} rounded-full`} />
+                              <span className={`text-[10px] font-black ${isOnline ? 'text-emerald-600' : 'text-slate-400'} uppercase tracking-widest`}>
+                                {isOnline ? 'Online Now' : 'Offline'}
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-xs font-bold text-slate-900 font-mono tracking-wider bg-slate-100 px-2 py-1 rounded-md inline-block w-fit">{user.password}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                          <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Database Record Valid</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="px-4 py-2 text-[10px] font-black bg-red-50 text-red-600 uppercase tracking-widest rounded-lg hover:bg-red-600 hover:text-white transition-all border border-red-100">Purge Data</button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-6 py-4">
+                          {user.lastLogin ? (
+                            <div className="flex flex-col">
+                              <div className="text-[10px] font-bold text-slate-900">
+                                {new Date(user.lastLogin).toLocaleString()}
+                              </div>
+                              <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider">System Timestamp</div>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">No Login Logged</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button 
+                            onClick={() => handlePurge(user.username)}
+                            className="px-4 py-2 text-[10px] font-black bg-red-50 text-red-600 uppercase tracking-widest rounded-lg hover:bg-red-600 hover:text-white transition-all border border-red-100"
+                          >
+                            Purge Data
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {filteredUsers.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">
+                      <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">
                         No subjects matching criteria found in database.
                       </td>
                     </tr>
