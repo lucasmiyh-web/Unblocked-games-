@@ -37,7 +37,20 @@ export default function AuthPage() {
         else setSuccess('Identification successfully committed to remote registry.');
       }
     } catch (e: any) {
-      setError('System connection failure. Please retry.');
+      let msg = 'System connection failure. Please retry.';
+      try {
+        if (e && e.message) {
+          const parsed = JSON.parse(e.message);
+          if (parsed && parsed.error) {
+            msg = `System Connection Alert: ${parsed.error}. Try again or use standard offline authorization.`;
+          }
+        }
+      } catch {
+        if (e && e.message) {
+          msg = `System Connection Alert: ${e.message}. Please retry.`;
+        }
+      }
+      setError(msg);
     }
   };
 

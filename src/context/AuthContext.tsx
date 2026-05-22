@@ -128,7 +128,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (userData.password === password) {
           const lastLogin = new Date().toISOString();
           
-          await updateDoc(userRef, { lastLogin });
+          try {
+            await updateDoc(userRef, { lastLogin });
+          } catch (updateErr) {
+            console.warn("Could not write lastLogin to Firestore, continuing", updateErr);
+          }
           console.log(`User logged in via Firestore: ${username}`);
           
           const sessionUser = { 
@@ -144,6 +148,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error) {
+      console.warn("Firestore login failed, trying local fallback", error);
+      try {
+        const localUsersStr = safeStorage.getItem('gamehub-local-users');
+        const localUsers = localUsersStr ? JSON.parse(localUsersStr) : {};
+        if (localUsers[username] && localUsers[username].password === password) {
+          const lastLogin = new Date().toISOString();
+          const sessionUser = {
+            username,
+            favorites: localUsers[username].favorites || [],
+            playCount: localUsers[username].playCount || 0,
+            lastLogin
+          };
+          setUser(sessionUser);
+          safeStorage.setItem('maths-revision-session', JSON.stringify(sessionUser));
+          return true;
+        }
+      } catch (localErr) {
+        console.error("Local fallback login failed", localErr);
+      }
       handleFirestoreError(error, OperationType.GET, path);
     }
     return false;
@@ -185,6 +208,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       safeStorage.setItem('maths-revision-session', JSON.stringify(sessionUser));
       return true;
     } catch (error) {
+      console.warn("Firestore registration failed, trying local fallback", error);
+      try {
+        const localUsersStr = safeStorage.getItem('gamehub-local-users') || '{}';
+        const localUsers = JSON.parse(localUsersStr);
+        if (localUsers[username]) {
+          return false; // User already registered locally
+        }
+
+        const lastLogin = new Date().toISOString();
+        localUsers[username] = {
+          username,
+          password,
+          favorites: [],
+          playCount: 0,
+          lastLogin
+        };
+        safeStorage.setItem('gamehub-local-users', JSON.stringify(localUsers));
+
+        const sessionUser = {
+          username,
+          favorites: [],
+          playCount: 0,
+          lastLogin
+        };
+        setUser(sessionUser);
+        safeStorage.setItem('maths-revision-session', JSON.stringify(sessionUser));
+        return true;
+      } catch (localErr) {
+        console.error("Local fallback registration failed", localErr);
+      }
       handleFirestoreError(error, OperationType.WRITE, path);
     }
     return false;
@@ -212,7 +265,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(newUser);
       safeStorage.setItem('maths-revision-session', JSON.stringify(newUser));
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, path);
+      console.warn("Firestore update favorites failed, fall back to local update:", error);
+      const newUser = { ...user, favorites: newFavs };
+      setUser(newUser);
+      safeStorage.setItem('maths-revision-session', JSON.stringify(newUser));
+      
+      try {
+        const localUsersStr = safeStorage.getItem('gamehub-local-users');
+        if (localUsersStr) {
+          const localUsers = JSON.parse(localUsersStr);
+          if (localUsers[user.username]) {
+            localUsers[user.username].favorites = newFavs;
+            safeStorage.setItem('gamehub-local-users', JSON.stringify(localUsers));
+          }
+        }
+      } catch (localErr) {
+        console.error("Local fallback toggle favorites failure", localErr);
+      }
     }
   };
 
@@ -229,7 +298,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(newUser);
       safeStorage.setItem('maths-revision-session', JSON.stringify(newUser));
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, path);
+      console.warn("Firestore update playCount failed, fall back to local update:", error);
+      const newUser = { ...user, playCount: newCount };
+      setUser(newUser);
+      safeStorage.setItem('maths-revision-session', JSON.stringify(newUser));
+      
+      try {
+        const localUsersStr = safeStorage.getItem('gamehub-local-users');
+        if (localUsersStr) {
+          const localUsers = JSON.parse(localUsersStr);
+          if (localUsers[user.username]) {
+            localUsers[user.username].playCount = newCount;
+            safeStorage.setItem('gamehub-local-users', JSON.stringify(localUsers));
+          }
+        }
+      } catch (localErr) {
+        console.error("Local fallback play count record failure", localErr);
+      }
     }
   };
 
