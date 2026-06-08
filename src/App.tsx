@@ -46,7 +46,6 @@ import VoltRacing from './games/VoltRacing';
 import GhostProtocol from './games/GhostProtocol';
 import CryptoClimb from './games/CryptoClimb';
 import BasketballStars from './games/BasketballStars';
-import DummyWorldCup from './games/DummyWorldCup';
 import GenericGame from './components/GenericGame';
 import MathRevision from './components/MathRevision';
 import GoonCorner from './components/GoonCorner';
@@ -284,7 +283,6 @@ function AppContent() {
            activeGame.id === 'ghostprotocol' ? <GhostProtocol /> :
            activeGame.id === 'cryptoclimb' ? <CryptoClimb /> :
            activeGame.id === 'basketballstars' ? <BasketballStars /> :
-           activeGame.id === 'dummiesworldcup' ? <DummyWorldCup /> :
            activeGame.url ? (
              <iframe 
                src={activeGame.url} 
