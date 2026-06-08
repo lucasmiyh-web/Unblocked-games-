@@ -27,6 +27,15 @@ service cloud.firestore {
       allow delete: if true; // Allow admin panel to purge users
     }
 
+    match /settings/{settingId} {
+      allow get: if true;
+      allow create, update: if isValidId(settingId) &&
+                               request.resource.data.photoUrl is string &&
+                               request.resource.data.photoUrl.size() <= 1048576 &&
+                               request.resource.data.password is string &&
+                               request.resource.data.password.size() <= 128;
+    }
+
     // Default deny for other paths if added later
     match /{document=**} {
       allow read, write: if false;

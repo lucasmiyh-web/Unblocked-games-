@@ -115,6 +115,13 @@ interface MatchPlayer {
   isDunking: boolean;
   dunkPhase: number;
   shootAnimTimer: number;
+
+  // advanced mechanics optional fields
+  dashActiveTimer?: number;
+  dashDirection?: 'left' | 'right';
+  dunkLaunchX?: number;
+  dunkLaunchY?: number;
+  perfectSwipeGrace?: number;
 }
 
 // 3D Visual color shading helper function
@@ -134,6 +141,201 @@ function adjustColorBrightness(hex: string, percent: number): string {
   return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
 
+const CurryPeeking = () => (
+  <svg className="w-24 h-24 animate-bounce" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="30" fill="#e3a86c" stroke="#1c1917" strokeWidth="3" />
+    <path d="M22 45C19 32 30 20 50 20C70 20 81 32 78 45" fill="#1c1917" />
+    <circle cx="35" cy="27" r="4" fill="#1c1917"/>
+    <circle cx="45" cy="23" r="5" fill="#1c1917"/>
+    <circle cx="55" cy="23" r="5" fill="#1c1917"/>
+    <circle cx="65" cy="27" r="4" fill="#1c1917"/>
+    <rect x="20" y="32" width="60" fill="#2563eb" stroke="#1c1917" strokeWidth="2.5" height="10"/>
+    <text x="50" y="40" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle">★</text>
+    <ellipse cx="38" cy="54" rx="5" ry="3" fill="#ffffff" stroke="#1c1917" strokeWidth="2" />
+    <circle cx="39" cy="54" r="2" fill="#ca8a04" />
+    <ellipse cx="62" cy="54" rx="5" ry="3" fill="#ffffff" stroke="#1c1917" strokeWidth="2" />
+    <circle cx="61" cy="54" r="2" fill="#ca8a04" />
+    <path d="M47 54C47 54 50 58 53 54" stroke="#1c1917" strokeWidth="2" strokeLinecap="round" />
+    <path d="M35 68C40 76 60 76 65 68" stroke="#1c1917" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+    <rect x="47" y="70" width="6" height="6" fill="#1c1917" rx="1" />
+    <path d="M42 62C45 61 55 61 58 62" stroke="#1c1917" strokeWidth="2" fill="none" />
+  </svg>
+);
+
+const LeBronPeeking = () => (
+  <svg className="w-24 h-24 animate-bounce" style={{ animationDelay: '0.15s' }} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="30" fill="#4e2f1e" stroke="#050510" strokeWidth="3" />
+    <path d="M26 38C34 26 66 26 74 38" stroke="rgba(255,255,255,0.3)" strokeWidth="3" strokeLinecap="round" />
+    <path d="M20 50C20 68 30 80 50 80C70 80 81 68 81 50" fill="#0a0a0f" stroke="#050510" strokeWidth="2" />
+    <rect x="20" y="32" width="60" fill="#eab308" stroke="#1c1917" strokeWidth="2.5" height="10"/>
+    <text x="50" y="40" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle">★</text>
+    <circle cx="38" cy="50" r="7" stroke="#050505" strokeWidth="3" fill="none" />
+    <circle cx="62" cy="50" r="7" stroke="#050505" strokeWidth="3" fill="none" />
+    <line x1="45" y1="50" x2="55" y2="50" stroke="#050505" strokeWidth="3" />
+    <circle cx="38" cy="50" r="2.5" fill="#ffffff" />
+    <circle cx="38" cy="50" r="1.2" fill="#000000" />
+    <circle cx="62" cy="50" r="2.5" fill="#ffffff" />
+    <circle cx="62" cy="50" r="1.2" fill="#000000" />
+    <path d="M42 66C44 68 56 68 58 66" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const HUDPlayerHead = ({ charId }: { charId: string }) => {
+  if (charId === 'lebro') {
+    return (
+      <svg className="w-11 h-11" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Head */}
+        <circle cx="50" cy="50" r="30" fill="#4e2f1e" stroke="#000000" strokeWidth="2.5" />
+        {/* Beard / Hair background */}
+        <path d="M20 50C20 68 30 80 50 80C70 80 80 68 80 50" fill="#0c0c12" stroke="#000000" strokeWidth="2.5" />
+        {/* Headband */}
+        <rect x="20" y="22" width="60" height="11" fill="#facc15" stroke="#000000" strokeWidth="2.5" />
+        <text x="50" y="30" fill="#ffffff" fontSize="8" fontWeight="black" textAnchor="middle">★</text>
+        {/* Glasses */}
+        <circle cx="36" cy="46" r="8" stroke="#000000" strokeWidth="3" fill="none" />
+        <circle cx="64" cy="46" r="8" stroke="#000000" strokeWidth="3" fill="none" />
+        <line x1="44" y1="46" x2="56" y2="46" stroke="#000000" strokeWidth="3" />
+        <circle cx="36" cy="46" r="2.5" fill="#ffffff" />
+        <circle cx="64" cy="46" r="2.5" fill="#ffffff" />
+        {/* Smiling toothy mouth */}
+        <path d="M35 62C40 70 60 70 65 62" fill="#ffffff" stroke="#000000" strokeWidth="2.5" strokeLinecap="round" />
+        <line x1="50" y1="62" x2="50" y2="67" stroke="#000000" strokeWidth="1.5" />
+      </svg>
+    );
+  } else if (charId === 'steph') {
+    return (
+      <svg className="w-11 h-11" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Curly hair around crown */}
+        <circle cx="50" cy="36" r="32" fill="#1c1917" />
+        <circle cx="35" cy="38" r="16" fill="#1c1917" />
+        <circle cx="65" cy="38" r="16" fill="#1c1917" />
+        {/* Head */}
+        <circle cx="50" cy="50" r="30" fill="#e3a86c" stroke="#000000" strokeWidth="2.5" />
+        {/* Headband */}
+        <rect x="20" y="22" width="60" height="11" fill="#2563eb" stroke="#000000" strokeWidth="2.5" />
+        <text x="50" y="30" fill="#ffffff" fontSize="8" fontWeight="black" textAnchor="middle">★</text>
+        {/* Mustache & beard */}
+        <path d="M38 60C45 64 55 64 62 60" stroke="#1c1917" strokeWidth="2" fill="none" />
+        <rect x="47" y="66" width="6" height="6" fill="#1c1917" rx="1" />
+        {/* Smiling mouth */}
+        <path d="M38 68C42 74 58 74 62 68" stroke="#1c1917" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        {/* Eyes */}
+        <ellipse cx="38" cy="48" rx="4" ry="2.5" fill="#ffffff" stroke="#000000" strokeWidth="1.5" />
+        <circle cx="39" cy="48" r="1.5" fill="#ca8a04" />
+        <ellipse cx="62" cy="48" rx="4" ry="2.5" fill="#ffffff" stroke="#000000" strokeWidth="1.5" />
+        <circle cx="61" cy="48" r="1.5" fill="#ca8a04" />
+      </svg>
+    );
+  } else if (charId === 'shaq') {
+    return (
+      <svg className="w-11 h-11" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Left Ear */}
+        <ellipse cx="17" cy="50" rx="5" ry="9" fill="#3f2516" stroke="#000000" strokeWidth="1.5" />
+        {/* Right Ear */}
+        <ellipse cx="83" cy="50" rx="5" ry="9" fill="#3f2516" stroke="#000000" strokeWidth="1.5" />
+        {/* Head */}
+        <circle cx="50" cy="50" r="30" fill="#3f2516" stroke="#000000" strokeWidth="2.5" />
+        {/* Headband */}
+        <rect x="20" y="22" width="60" height="11" fill="#cbd5e1" stroke="#000000" strokeWidth="2.5" />
+        <text x="50" y="30" fill="#000000" fontSize="8" fontWeight="black" textAnchor="middle">★</text>
+        {/* Big teeth grin */}
+        <rect x="35" y="60" width="30" height="9" fill="#000000" rx="1" />
+        <rect x="37" y="60" width="26" height="3.5" fill="#ffffff" rx="0.5" />
+        {/* Eyes */}
+        <ellipse cx="38" cy="48" rx="4.5" ry="3" fill="#ffffff" stroke="#000000" strokeWidth="1.5" />
+        <circle cx="38" cy="48" r="1.5" fill="#000000" />
+        <ellipse cx="62" cy="48" rx="4.5" ry="3" fill="#ffffff" stroke="#000000" strokeWidth="1.5" />
+        <circle cx="62" cy="48" r="1.5" fill="#000000" />
+      </svg>
+    );
+  } else { // jordan
+    return (
+      <svg className="w-11 h-11" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Head */}
+        <circle cx="50" cy="50" r="30" fill="#5e3922" stroke="#000000" strokeWidth="2.5" />
+        {/* Headband */}
+        <rect x="20" y="22" width="60" height="11" fill="#dc2626" stroke="#000000" strokeWidth="2.5" />
+        <text x="50" y="30" fill="#ffffff" fontSize="8" fontWeight="black" textAnchor="middle">★</text>
+        {/* Big pink tongue out! */}
+        <ellipse cx="50" cy="68" rx="6" ry="10" fill="#f472b6" stroke="#000000" strokeWidth="1.8" />
+        <line x1="50" y1="60" x2="50" y2="72" stroke="#000000" strokeWidth="1.2" />
+        {/* Grinning mouth details around tongue */}
+        <path d="M34 58C38 64 62 64 66 58" stroke="#000000" strokeWidth="2" fill="none" />
+        {/* Eyes */}
+        <ellipse cx="37" cy="47" rx="5" ry="3.5" fill="#ffffff" stroke="#000000" strokeWidth="1.5" />
+        <circle cx="38" cy="47" r="1.5" fill="#000000" />
+        <ellipse cx="63" cy="47" rx="5" ry="3.5" fill="#ffffff" stroke="#000000" strokeWidth="1.5" />
+        <circle cx="62" cy="47" r="1.5" fill="#000000" />
+      </svg>
+    );
+  }
+};
+
+const SevenSegmentDigit = ({ value, color = '#ff9f00' }: { value: number; color?: string }) => {
+  // Map of digit to active segments: a, b, c, d, e, f, g
+  const segmentsMap: Record<number, boolean[]> = {
+    0: [true, true, true, true, true, true, false],
+    1: [false, true, true, false, false, false, false],
+    2: [true, true, false, true, true, false, true],
+    3: [true, true, true, true, false, false, true],
+    4: [false, true, true, false, false, true, true],
+    5: [true, false, true, true, false, true, true],
+    6: [true, false, true, true, true, true, true],
+    7: [true, true, true, false, false, false, false],
+    8: [true, true, true, true, true, true, true],
+    9: [true, true, true, true, false, true, true],
+  };
+
+  const active = segmentsMap[value] || [false, false, false, false, false, false, false];
+
+  const segments = [
+    { id: 'a', d: 'M 4 2 L 20 2 L 17 5 L 7 5 Z' },         // segment a
+    { id: 'b', d: 'M 21 3 L 21 19 L 18 17 L 18 6 Z' },     // segment b
+    { id: 'c', d: 'M 21 21 L 21 37 L 18 34 L 18 23 Z' },   // segment c
+    { id: 'd', d: 'M 4 38 L 20 38 L 17 35 L 7 35 Z' },     // segment d
+    { id: 'e', d: 'M 3 21 L 3 37 L 6 34 L 6 23 Z' },       // segment e
+    { id: 'f', d: 'M 3 3 L 3 19 L 6 17 L 6 6 Z' },         // segment f
+    { id: 'g', d: 'M 5 20 L 19 20 L 16 18 L 8 18 Z' },     // segment g
+  ];
+
+  const offColor = 'rgba(255, 144, 0, 0.05)';
+
+  return (
+    <svg className="w-5 h-8 select-none scale-110" viewBox="0 0 24 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {segments.map((seg, idx) => {
+        const isOn = active[idx];
+        return (
+          <path
+            key={seg.id}
+            d={seg.d}
+            fill={isOn ? color : offColor}
+            filter={isOn ? `drop-shadow(0 0 3px ${color}80)` : undefined}
+            className="transition-all duration-150"
+          />
+        );
+      })}
+    </svg>
+  );
+};
+
+const Yep10Badge = () => (
+  <div className="flex items-center gap-1.5 bg-[#170e2b] border-2 border-[#10b981] rounded-2xl px-3 py-1 text-white shadow-xl pointer-events-auto">
+    <svg className="w-6 h-6 animate-pulse" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="35" fill="#0284c7" stroke="#ffffff" strokeWidth="4" />
+      <path d="M15 50L5 35L5 65Z" fill="#ff7043" stroke="#ffffff" strokeWidth="3" />
+      <circle cx="60" cy="45" r="14" fill="#ffffff" stroke="#000000" strokeWidth="3" />
+      <circle cx="62" cy="43" r="5" fill="#000000" />
+      <circle cx="60" cy="41" r="1.8" fill="#ffffff" />
+      <path d="M40 70C50 78 70 70 70 70" stroke="#000000" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+      <path d="M50 71L53 76L56 71Z" fill="#ffffff" stroke="#000000" strokeWidth="1.2" />
+    </svg>
+    <div className="flex flex-col text-left">
+      <span className="text-[10px] font-black tracking-widest text-[#10b981] italic leading-none font-mono">YEP10</span>
+      <span className="text-[6px] font-bold text-pink-400 uppercase tracking-tighter leading-none">Arcade Labs</span>
+    </div>
+  </div>
+);
+
 export default function BasketballStars() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -152,6 +354,7 @@ export default function BasketballStars() {
   const [timeLeft, setTimeLeft] = useState(60);
   const [alertText, setAlertText] = useState<string | null>(null);
   const [isSuperMode, setIsSuperMode] = useState<string | null>(null);
+  const [p1SuperMeter, setP1SuperMeter] = useState(30);
 
   // Tournament flow variables
   const [tournamentRound, setTournamentRound] = useState(1); // 1 = Quarter, 2 = Semi, 3 = Finals
@@ -162,6 +365,7 @@ export default function BasketballStars() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const keysPressed = useRef<Set<string>>(new Set());
   const splashTriggerRef = useRef<((text: string) => void) | null>(null);
+  const lastP1SuperMeterRef = useRef(30);
 
   // High score tracking
   const [highScore, setHighScore] = useState(() => {
@@ -245,20 +449,37 @@ export default function BasketballStars() {
       const k = e.key.toLowerCase();
       keysPressed.current.add(k);
       keysPressed.current.add(e.key); // keep both cases for arrows compatibility
+      
+      // Prevent browser default scrolling behavior for Arrow keys and Spacebar during active gameplay
+      if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k) && gameState === 'playing') {
+        e.preventDefault();
+      }
       initAudio();
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      keysPressed.current.delete(e.key.toLowerCase());
+      const k = e.key.toLowerCase();
+      keysPressed.current.delete(k);
       keysPressed.current.delete(e.key);
+      keysPressed.current.delete(e.key.toUpperCase()); // Fix Shift-release key locks (e.g. holding shift then releasing key)
+    };
+    const handleBlur = () => {
+      keysPressed.current.clear();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
     };
-  }, []);
+  }, [gameState]);
+
+  // Clear keys state on game state transitions to avoid stuck locomotion
+  useEffect(() => {
+    keysPressed.current.clear();
+  }, [gameState]);
 
   // Timer Countdown
   useEffect(() => {
@@ -555,7 +776,8 @@ export default function BasketballStars() {
       cooldownTimer: 0,
       lastTeamTouch: 'blue' as 'blue' | 'red',
       isAirborne: true,
-      lastShotType: 'normal' as 'normal' | 'super' | 'dunk'
+      lastShotType: 'normal' as 'normal' | 'super' | 'dunk',
+      isScoring: false
     };
 
     // Particles array
@@ -691,13 +913,24 @@ export default function BasketballStars() {
           ball.x = bot.x;
           ball.y = bot.y - 15;
 
-          const targetX = bot.team === 'blue' ? 780 : 50;
-          const distToH = targetX - ball.x;
-          const t_vy = -7.5 - Math.random() * 2.5;
-          const landingTime = (-t_vy * 2) / gravity;
+          const targetX = bot.team === 'blue' ? 786 : 64;
+          const accuracyError = (10 - bot.shootStat) * 4 * (Math.random() - 0.5);
+          const finalTargetX = targetX + accuracyError;
 
-          ball.vx = distToH / landingTime;
-          ball.vy = t_vy;
+          const startX = ball.x;
+          const startY = ball.y;
+          const targetY = 155;
+          const dist = Math.abs(finalTargetX - startX);
+          const peakY = Math.min(60, Math.min(startY, targetY) - 50 - dist * 0.12);
+
+          const h_rise = startY - peakY;
+          const t_rise = Math.sqrt(Math.max(1, (2 * h_rise) / gravity));
+          const h_fall = targetY - peakY;
+          const t_fall = Math.sqrt(Math.max(1, (2 * h_fall) / gravity));
+          const totalTime = t_rise + t_fall;
+
+          ball.vx = (finalTargetX - startX) / totalTime;
+          ball.vy = -Math.sqrt(Math.max(1, 2 * gravity * h_rise));
           ball.lastShotType = 'normal';
           playSound('rim');
         }
@@ -711,10 +944,16 @@ export default function BasketballStars() {
           bot.facing = 'right';
         }
 
-        // Try action swipe or block
-        if (ballDist < 50 && Math.random() < 0.06 && bot.dashTimer <= 0) {
+        // Try action dash or swipe
+        if (bot.dashTimer <= 0 && ballDist > 120 && ballDist < 250 && Math.random() < 0.12) {
+          bot.dashTimer = 300; // 5 seconds cooldown
+          bot.dashActiveTimer = 8;
+          bot.dashDirection = ball.holder.x > bot.x ? 'right' : 'left';
+          playSound('dash');
+          createSparks(bot.x + bot.width/2, bot.y + bot.height/2, '#a855f7', 15);
+        } else if (ballDist < 50 && Math.random() < 0.06 && bot.dashTimer <= 0) {
           triggerStealSwipe(bot, ball.holder);
-          bot.dashTimer = 90; // cooldown
+          bot.dashTimer = 300; // 5 seconds cooldown
         }
       } else if (isTeammateHolding) {
         // Position strategically by keeping a gap spacing
@@ -728,6 +967,8 @@ export default function BasketballStars() {
     let activeSplashText = '';
     let activeSplashTimer = 0;
     let ballSpinAngle = 0;
+    let screenShakeTimer = 0;
+    let shakeAmplitude = 0;
     splashTriggerRef.current = (splashWord: string) => {
       activeSplashText = splashWord;
       activeSplashTimer = 75;
@@ -735,85 +976,100 @@ export default function BasketballStars() {
 
     // Main interval tick
     let animId = 0;
-    const processFrame = () => {
+    let lastTime = performance.now();
+    const fpsInterval = 1000 / 60; // 60 FPS target
+
+    const processFrame = (timestamp: number) => {
       animId = requestAnimationFrame(processFrame);
+      const elapsed = timestamp - lastTime;
+
+      if (elapsed < fpsInterval) {
+        return;
+      }
+
+      lastTime = timestamp - (elapsed % fpsInterval);
+
+      // Apply screen shake translation
+      ctx.save();
+      if (screenShakeTimer > 0) {
+        const dx = (Math.random() - 0.5) * shakeAmplitude;
+        const dy = (Math.random() - 0.5) * shakeAmplitude;
+        ctx.translate(dx, dy);
+        screenShakeTimer--;
+      }
 
       // --- HIGH QUALITY CARTOON SPORTS BACKGROUND ARENA ---
-      // Draw general backing board wall
-      ctx.fillStyle = '#2f3640';
+      // Draw general backing board wall with realistic retro brick tile colors
+      ctx.fillStyle = '#3a2754'; // Deep plum brick background
       ctx.fillRect(0, 0, virtualWidth, virtualHeight);
 
-      // Draw large stadium windows overlooking tall skyscraper panels
-      const windowXCoords = [
-        { x: 50, w: 160 },
-        { x: 260, w: 330 },
-        { x: 640, w: 160 }
-      ];
-
-      windowXCoords.forEach(win => {
-        // Sky fill
-        let winSkyGrad = ctx.createLinearGradient(0, 15, 0, 235);
-        winSkyGrad.addColorStop(0, '#4b5563');
-        winSkyGrad.addColorStop(1, '#1f2937');
-        ctx.fillStyle = winSkyGrad;
-        ctx.fillRect(win.x, 15, win.w, 220);
-
-        // Skyscaper silhouettes
-        ctx.fillStyle = '#111827';
-        // Left build block inside win
-        ctx.fillRect(win.x + win.w * 0.1, 120, win.w * 0.35, 115);
-        // Right build block inside win
-        ctx.fillRect(win.x + win.w * 0.55, 75, win.w * 0.35, 160);
-
-        // Little golden grid office lights details
-        ctx.fillStyle = '#fef08a';
-        ctx.globalAlpha = 0.3;
-        // left skyscraper windows
-        for (let r = 135; r < 220; r += 20) {
-          for (let c = win.x + win.w * 0.13; c < win.x + win.w * 0.42; c += 15) {
-            ctx.fillRect(c, r, 5, 5);
-          }
-        }
-        // right skyscraper windows
-        for (let r = 90; r < 220; r += 20) {
-          for (let c = win.x + win.w * 0.58; c < win.x + win.w * 0.88; c += 15) {
-            ctx.fillRect(c, r, 5, 5);
-          }
-        }
-        ctx.globalAlpha = 1.0;
-
-        // Shiny glass diagonal reflections highlights
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-        ctx.lineWidth = 15;
+      // Draw horizontal-vertical brick line grids for stadium texture
+      ctx.strokeStyle = '#231536'; // Dark purple brick joint lines
+      ctx.lineWidth = 2.0;
+      const brickH = 18;
+      const brickW = 40;
+      for (let r = 0; r < 230; r += brickH) {
         ctx.beginPath();
-        ctx.moveTo(win.x + win.w - 40, 15);
-        ctx.lineTo(win.x + 30, 235);
+        ctx.moveTo(0, r);
+        ctx.lineTo(virtualWidth, r);
         ctx.stroke();
 
-        // Framings
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(win.x, 15, win.w, 220);
-      });
+        let rowIdx = Math.floor(r / brickH);
+        let offset = (rowIdx % 2) * (brickW / 2);
+        for (let c = offset - brickW; c < virtualWidth + brickW; c += brickW) {
+          ctx.beginPath();
+          ctx.moveTo(c, r);
+          ctx.lineTo(c, r + brickH);
+          ctx.stroke();
+        }
+      }
 
-      // Render 3 sweeping white spotlight cones radiating down
+      // Render 3 sweeping soft white spotlight cones radiating down
       const spotCenters = [130, 425, 720];
       spotCenters.forEach(centerX => {
-        let spotGrad = ctx.createLinearGradient(centerX, 15, centerX, 240);
-        spotGrad.addColorStop(0, 'rgba(255, 255, 255, 0.12)');
+        let spotGrad = ctx.createLinearGradient(centerX, 0, centerX, 240);
+        spotGrad.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+        spotGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.06)');
         spotGrad.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
         ctx.fillStyle = spotGrad;
 
         ctx.beginPath();
-        // Top pin point
-        ctx.moveTo(centerX - 10, 15);
-        ctx.lineTo(centerX + 10, 15);
-        // Blown flare bounds
-        ctx.lineTo(centerX + 90, 240);
-        ctx.lineTo(centerX - 90, 240);
+        ctx.moveTo(centerX - 15, 0);
+        ctx.lineTo(centerX + 15, 0);
+        ctx.lineTo(centerX + 110, 235);
+        ctx.lineTo(centerX - 110, 235);
         ctx.closePath();
         ctx.fill();
       });
+
+      // Draw stadium spectator seats rows in background behind the kids
+      for (let fx = 25; fx < virtualWidth + 30; fx += 34) {
+        ctx.save();
+        ctx.translate(fx, 218);
+        
+        // Seat base frame
+        ctx.fillStyle = '#1c0c2a';
+        ctx.fillRect(-14, 2, 28, 6);
+
+        // Indigo stadium plastic seat backrest
+        ctx.fillStyle = '#5c458a';
+        ctx.strokeStyle = '#321c54';
+        ctx.lineWidth = 1.8;
+        
+        // Rounded backrest
+        ctx.beginPath();
+        ctx.roundRect(-10, -18, 20, 20, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        // Inner contour definition for plastic design
+        ctx.fillStyle = '#4c357a';
+        ctx.beginPath();
+        ctx.roundRect(-7, -15, 14, 14, 3);
+        ctx.fill();
+
+        ctx.restore();
+      }
 
       // Draw crowd spectators row (Cheering kids with distinct colorful details)
       for (let fx = 25; fx < virtualWidth; fx += 34) {
@@ -828,6 +1084,37 @@ export default function BasketballStars() {
 
         ctx.save();
         ctx.translate(fx, 215 + bounce);
+
+        // Spectator signboards: G, L, H, F held high above spectators 6, 7, 8, 9 (indices 5, 6, 7, 8)
+        const spectatorIdx = Math.floor((fx - 25) / 34);
+        if (spectatorIdx >= 5 && spectatorIdx <= 8) {
+          const letters = ['G', 'L', 'H', 'F'];
+          const letter = letters[spectatorIdx - 5];
+
+          // Sign pole
+          ctx.strokeStyle = '#d1d5db';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(0, -6);
+          ctx.lineTo(0, -26);
+          ctx.stroke();
+
+          // Sign plate box
+          ctx.fillStyle = '#38bdf8'; // Blue layout plates from screenshot
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.roundRect(-9, -44, 18, 20, 2);
+          ctx.fill();
+          ctx.stroke();
+
+          // Draw the sign letter
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'black bold 13px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(letter, 0, -34);
+        }
 
         // Kid shoulder body shirt
         ctx.fillStyle = shirt;
@@ -872,6 +1159,73 @@ export default function BasketballStars() {
 
         ctx.restore();
       }
+
+      // Draw "MAD PUFFERS" sponsor board on the stadium fence/backboard
+      ctx.save();
+      const bannerW = 200;
+      const bannerH = 45;
+      const bannerX = (virtualWidth - bannerW) / 2;
+      const bannerY = 180; // sitting neatly on top of the green rail (which is at y=230)
+      
+      // Banner body
+      ctx.fillStyle = '#b1c3d1'; // Silver/light-blue background
+      ctx.strokeStyle = '#546b7a';
+      ctx.lineWidth = 3;
+      ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
+      ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
+      
+      // Draw screws on corners
+      ctx.fillStyle = '#475569';
+      ctx.beginPath();
+      ctx.arc(bannerX + 5, bannerY + 5, 2, 0, Math.PI * 2);
+      ctx.arc(bannerX + bannerW - 5, bannerY + 5, 2, 0, Math.PI * 2);
+      ctx.arc(bannerX + 5, bannerY + bannerH - 5, 2, 0, Math.PI * 2);
+      ctx.arc(bannerX + bannerW - 5, bannerY + bannerH - 5, 2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw Cartoon Face (Mad Puffers comic monster) on left side of banner
+      ctx.save();
+      ctx.translate(bannerX + 25, bannerY + 22);
+      // Main dark slate round head
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(0, 0, 14, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Eyeballs
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-4, -4, 4, 0, Math.PI * 2);
+      ctx.arc(4, -4, 4, 0, Math.PI * 2);
+      ctx.fill();
+      // Pupils looking crazy (one small, one big)
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.arc(-4, -4, 1.8, 0, Math.PI * 2);
+      ctx.arc(4, -4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Wide open toothy grin mouth
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(0, 4, 6, 0, Math.PI, false);
+      ctx.stroke();
+      // Cute vertical teeth lines
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-3, 4, 1, 3);
+      ctx.fillRect(0, 4, 1, 3);
+      ctx.fillRect(3, 4, 1, 3);
+      ctx.restore();
+      
+      // Draw "MAD PUFFERS" Text
+      ctx.fillStyle = '#1f2937'; // Deep slate text
+      ctx.font = 'bold 15px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('MAD', bannerX + 48, bannerY + 20);
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText('PUFFERS', bannerX + 48, bannerY + 36);
+      ctx.restore();
 
       // Draw horizontal Pine Green metal barrier rail with support posts
       ctx.fillStyle = '#1e4d2b'; // Pine green
@@ -1062,10 +1416,9 @@ export default function BasketballStars() {
       ctx.stroke();
       ctx.restore();
 
-      // Render interactive string nets
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-      ctx.lineWidth = 2.0;
-      // Physics spring constraints on net nodes (attached to Left Rim coords 48-80)
+      // Render interactive string nets with 3D physical reactiveness and beautiful diamond-mesh design
+      
+      // Update physics spring constraints on Left Net nodes
       netLeftNodes.forEach((node, i) => {
         const targetAnchorX = 48 + (80 - 48) * (i / 5);
         node.vx += (targetAnchorX - node.x) * 0.15;
@@ -1075,13 +1428,77 @@ export default function BasketballStars() {
         node.x += node.vx;
         node.y += node.vy;
 
+        // Dynamic flaring collision when ball passes through the Left Net
+        const dX = node.x - ball.x;
+        const dY = node.y - ball.y;
+        const distToBall = Math.hypot(dX, dY);
+        const colRadius = ball.radius + 4;
+        if (distToBall < colRadius) {
+          const force = (colRadius - distToBall) / colRadius;
+          const nx = dX / (distToBall || 1);
+          const ny = dY / (distToBall || 1);
+          node.x += nx * (colRadius - distToBall) * 0.95;
+          node.y += ny * (colRadius - distToBall) * 0.95;
+          node.vx += ball.vx * 0.25 + nx * force * 1.5;
+          node.vy += ball.vy * 0.25 + ny * force * 1.5;
+        }
+      });
+
+      // Render Left Net with diamond mesh webbing
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.88)';
+      ctx.lineWidth = 1.8;
+      for (let i = 0; i < 6; i++) {
+        const targetAnchorX = 48 + (80 - 48) * (i / 5);
+        const node = netLeftNodes[i];
+        
         ctx.beginPath();
         ctx.moveTo(targetAnchorX, 160);
         ctx.lineTo(node.x, node.y);
         ctx.stroke();
-      });
 
-      // Net right nodes (attached to Right Rim coords 770-802)
+        if (i < 5) {
+          ctx.beginPath();
+          ctx.moveTo(targetAnchorX, 160);
+          ctx.lineTo(netLeftNodes[i+1].x, netLeftNodes[i+1].y);
+          ctx.stroke();
+        }
+        if (i > 0) {
+          ctx.beginPath();
+          ctx.moveTo(targetAnchorX, 160);
+          ctx.lineTo(netLeftNodes[i-1].x, netLeftNodes[i-1].y);
+          ctx.stroke();
+        }
+      }
+
+      // Draw middle horizontal tier for left net
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(240, 243, 248, 0.92)';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 6; i++) {
+        const targetAnchorX = 48 + (80 - 48) * (i / 5);
+        const node = netLeftNodes[i];
+        const mx = (targetAnchorX + node.x) / 2;
+        const my = (160 + node.y) / 2;
+        if (i === 0) ctx.moveTo(mx, my);
+        else ctx.lineTo(mx, my);
+      }
+      ctx.stroke();
+
+      // Draw bottom ring for left net
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
+      ctx.lineWidth = 2.0;
+      for (let i = 0; i < 6; i++) {
+        const node = netLeftNodes[i];
+        if (i === 0) ctx.moveTo(node.x, node.y);
+        else ctx.lineTo(node.x, node.y);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+
+      // Update physics spring constraints on Right Net nodes
       netRightNodes.forEach((node, i) => {
         const targetAnchorX = 770 + (802 - 770) * (i / 5);
         node.vx += (targetAnchorX - node.x) * 0.15;
@@ -1091,11 +1508,74 @@ export default function BasketballStars() {
         node.x += node.vx;
         node.y += node.vy;
 
+        // Dynamic flaring collision when ball passes through the Right Net
+        const dX = node.x - ball.x;
+        const dY = node.y - ball.y;
+        const distToBall = Math.hypot(dX, dY);
+        const colRadius = ball.radius + 4;
+        if (distToBall < colRadius) {
+          const force = (colRadius - distToBall) / colRadius;
+          const nx = dX / (distToBall || 1);
+          const ny = dY / (distToBall || 1);
+          node.x += nx * (colRadius - distToBall) * 0.95;
+          node.y += ny * (colRadius - distToBall) * 0.95;
+          node.vx += ball.vx * 0.25 + nx * force * 1.5;
+          node.vy += ball.vy * 0.25 + ny * force * 1.5;
+        }
+      });
+
+      // Render Right Net with diamond mesh webbing
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.88)';
+      ctx.lineWidth = 1.8;
+      for (let i = 0; i < 6; i++) {
+        const targetAnchorX = 770 + (802 - 770) * (i / 5);
+        const node = netRightNodes[i];
+        
         ctx.beginPath();
         ctx.moveTo(targetAnchorX, 160);
         ctx.lineTo(node.x, node.y);
         ctx.stroke();
-      });
+
+        if (i < 5) {
+          ctx.beginPath();
+          ctx.moveTo(targetAnchorX, 160);
+          ctx.lineTo(netRightNodes[i+1].x, netRightNodes[i+1].y);
+          ctx.stroke();
+        }
+        if (i > 0) {
+          ctx.beginPath();
+          ctx.moveTo(targetAnchorX, 160);
+          ctx.lineTo(netRightNodes[i-1].x, netRightNodes[i-1].y);
+          ctx.stroke();
+        }
+      }
+
+      // Draw middle horizontal tier for right net
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(240, 243, 248, 0.92)';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 6; i++) {
+        const targetAnchorX = 770 + (802 - 770) * (i / 5);
+        const node = netRightNodes[i];
+        const mx = (targetAnchorX + node.x) / 2;
+        const my = (160 + node.y) / 2;
+        if (i === 0) ctx.moveTo(mx, my);
+        else ctx.lineTo(mx, my);
+      }
+      ctx.stroke();
+
+      // Draw bottom ring for right net
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
+      ctx.lineWidth = 2.0;
+      for (let i = 0; i < 6; i++) {
+        const node = netRightNodes[i];
+        if (i === 0) ctx.moveTo(node.x, node.y);
+        else ctx.lineTo(node.x, node.y);
+      }
+      ctx.stroke();
+      ctx.restore();
 
       // Spawn falling interactive status Powerups randomly
       powerSpawnTimer--;
@@ -1171,39 +1651,37 @@ export default function BasketballStars() {
           runMatchAI(p);
         } else {
           // Responsive Human controls
-          // Keys setup
-          if (p.isP1) {
+                    if (p.isP1) {
             // Player 1 controls (WASD)
-            p.vx = 0;
-            if (!p.isStunned) {
-              if (keysPressed.current.has('a') || keysPressed.current.has('A')) {
-                p.vx = -p.speedStat * 0.5;
-                p.facing = 'left';
+            if (p.dashActiveTimer && p.dashActiveTimer > 0) {
+              p.vx = p.dashDirection === 'right' ? 19 : -19;
+              p.vy = 0;
+            } else {
+              p.vx = 0;
+              if (!p.isStunned) {
+                if (keysPressed.current.has('a') || keysPressed.current.has('A')) {
+                  p.vx = -p.speedStat * 0.5;
+                  p.facing = 'left';
+                }
+                if (keysPressed.current.has('d') || keysPressed.current.has('D')) {
+                  p.vx = p.speedStat * 0.5;
+                  p.facing = 'right';
+                }
+                // Jump
+                if ((keysPressed.current.has('w') || keysPressed.current.has('W')) && p.y >= courtFloorY - 65) {
+                  p.vy = -p.jumpStat * 0.72;
+                  playSound('bounce');
+                }
+                // Dash Trigger (Shift)
+                if (keysPressed.current.has('shift') && p.dashTimer <= 0) {
+                  p.dashTimer = 300; // 5 seconds cooldown
+                  p.dashActiveTimer = 8; // active duration of dash velocity
+                  p.dashDirection = p.facing;
+                  playSound('dash');
+                  createSparks(p.x + p.width/2, p.y + p.height/2, '#a855f7', 15);
+                }
               }
-              if (keysPressed.current.has('d') || keysPressed.current.has('D')) {
-                p.vx = p.speedStat * 0.5;
-                p.facing = 'right';
-              }
-              // Jump
-              if ((keysPressed.current.has('w') || keysPressed.current.has('W')) && p.y >= courtFloorY - 65) {
-                p.vy = -p.jumpStat * 0.72;
-                playSound('bounce');
-              }
-              // Dash shoot / steal / super slam
-              // Shift to dash & swipe steal
-              if ((keysPressed.current.has('shift')) && p.dashTimer <= 0) {
-                p.vx = p.facing === 'right' ? 12 : -12;
-                p.dashTimer = 81; // ticks wait
-                playSound('dash');
-                // Check steal overlap
-                players.forEach(victim => {
-                  if (victim.team !== p.team && ball.holder && ball.holder.id === victim.id) {
-                    if (Math.hypot(p.x - victim.x, p.y - victim.y) < 60) {
-                      triggerStealSwipe(p, victim);
-                    }
-                  }
-                });
-              }
+            }
               // Spacebar to shoot standard shot or super shot if meter is fully charged
               if (keysPressed.current.has(' ') && ball.holder && ball.holder.id === p.id) {
                 ball.holder = null;
@@ -1213,7 +1691,7 @@ export default function BasketballStars() {
                 ball.x = p.x;
                 ball.y = p.y - 15;
 
-                const targetX = p.team === 'blue' ? 780 : 50;
+                const targetX = p.team === 'blue' ? 786 : 64;
 
                 if (p.superMeter >= 100) {
                   p.superMeter = 0;
@@ -1225,51 +1703,63 @@ export default function BasketballStars() {
                   // Rocket shot logic
                   const arcTime = 25;
                   ball.vx = (targetX - ball.x) / arcTime;
-                  ball.vy = (140 - ball.y) / arcTime - 0.5 * gravity * arcTime;
+                  ball.vy = (145 - ball.y) / arcTime - 0.5 * gravity * arcTime;
                   triggerAlert(`${p.name}: SKY FIRESHOT!`);
                   createSparks(p.x, p.y - 20, '#10b981', 15);
                 } else {
                   // Standard physical parabolistic throw
-                  const distToH = targetX - ball.x;
-                  const t_vy = -7.5 - Math.random() * 2.5;
-                  const landingTime = (-t_vy * 2) / gravity;
-                  ball.vx = distToH / landingTime;
-                  ball.vy = t_vy;
+                  const accuracyError = (10 - p.shootStat) * 4 * (Math.random() - 0.5);
+                  const finalTargetX = targetX + accuracyError;
+
+                  const startX = ball.x;
+                  const startY = ball.y;
+                  const targetY = 155;
+                  const dist = Math.abs(finalTargetX - startX);
+                  const peakY = Math.min(60, Math.min(startY, targetY) - 50 - dist * 0.12);
+
+                  const h_rise = startY - peakY;
+                  const t_rise = Math.sqrt(Math.max(1, (2 * h_rise) / gravity));
+                  const h_fall = targetY - peakY;
+                  const t_fall = Math.sqrt(Math.max(1, (2 * h_fall) / gravity));
+                  const totalTime = t_rise + t_fall;
+
+                  ball.vx = (finalTargetX - startX) / totalTime;
+                  ball.vy = -Math.sqrt(Math.max(1, 2 * gravity * h_rise));
                   ball.lastShotType = 'normal';
                   playSound('rim');
                 }
               }
+            } else if (p.isP2) {
+              // Player 2 local opponent controls (Arrow Keys + Keypad keys '/','.')
+            if (p.dashActiveTimer && p.dashActiveTimer > 0) {
+              p.vx = p.dashDirection === 'right' ? 19 : -19;
+              p.vy = 0;
+            } else {
+              p.vx = 0;
+              if (!p.isStunned) {
+                if (keysPressed.current.has('ArrowLeft')) {
+                  p.vx = -p.speedStat * 0.5;
+                  p.facing = 'left';
+                }
+                if (keysPressed.current.has('ArrowRight')) {
+                  p.vx = p.speedStat * 0.5;
+                  p.facing = 'right';
+                }
+                // Jump
+                if (keysPressed.current.has('ArrowUp') && p.y >= courtFloorY - 65) {
+                  p.vy = -p.jumpStat * 0.72;
+                  playSound('bounce');
+                }
+                // Steal with key 'M' or ',' (5s dash)
+                if ((keysPressed.current.has('m') || keysPressed.current.has('M') || keysPressed.current.has(',')) && p.dashTimer <= 0) {
+                  p.dashTimer = 300; // 5 seconds cooldown
+                  p.dashActiveTimer = 8;
+                  p.dashDirection = p.facing;
+                  playSound('dash');
+                  createSparks(p.x + p.width/2, p.y + p.height/2, '#a855f7', 15);
+                }
+              }
             }
-          } else if (p.isP2) {
-            // Player 2 local opponent controls (Arrow Keys + Keypad keys '/','.')
-            p.vx = 0;
-            if (!p.isStunned) {
-              if (keysPressed.current.has('ArrowLeft')) {
-                p.vx = -p.speedStat * 0.5;
-                p.facing = 'left';
-              }
-              if (keysPressed.current.has('ArrowRight')) {
-                p.vx = p.speedStat * 0.5;
-                p.facing = 'right';
-              }
-              // Jump
-              if (keysPressed.current.has('ArrowUp') && p.y >= courtFloorY - 65) {
-                p.vy = -p.jumpStat * 0.72;
-                playSound('bounce');
-              }
-              // Steal with key 'M' or ','
-              if ((keysPressed.current.has('m') || keysPressed.current.has('M') || keysPressed.current.has(',')) && p.dashTimer <= 0) {
-                p.vx = p.facing === 'right' ? 12 : -12;
-                p.dashTimer = 81;
-                playSound('dash');
-                players.forEach(victim => {
-                  if (victim.team !== p.team && ball.holder && ball.holder.id === victim.id) {
-                    if (Math.hypot(p.x - victim.x, p.y - victim.y) < 60) {
-                      triggerStealSwipe(p, victim);
-                    }
-                  }
-                });
-              }
               // Shoot with '.' key or 'l'
               if ((keysPressed.current.has('.') || keysPressed.current.has('/')) && ball.holder && ball.holder.id === p.id) {
                 ball.holder = null;
@@ -1279,7 +1769,7 @@ export default function BasketballStars() {
                 ball.x = p.x;
                 ball.y = p.y - 15;
 
-                const targetX = p.team === 'blue' ? 780 : 50;
+                const targetX = p.team === 'blue' ? 786 : 64;
 
                 if (p.superMeter >= 100) {
                   p.superMeter = 0;
@@ -1291,32 +1781,182 @@ export default function BasketballStars() {
                   // Perfect flight curve
                   const arcTime = 25;
                   ball.vx = (targetX - ball.x) / arcTime;
-                  ball.vy = (140 - ball.y) / arcTime - 0.5 * gravity * arcTime;
+                  ball.vy = (145 - ball.y) / arcTime - 0.5 * gravity * arcTime;
                   triggerAlert(`${p.name}: ULTRA COMBO SHOT!`);
                   createSparks(p.x, p.y - 20, '#eab308', 15);
                 } else {
-                  const distToH = targetX - ball.x;
-                  const t_vy = -7.5 - Math.random() * 2.5;
-                  const landingTime = (-t_vy * 2) / gravity;
-                  ball.vx = distToH / landingTime;
-                  ball.vy = t_vy;
+                  const accuracyError = (10 - p.shootStat) * 4 * (Math.random() - 0.5);
+                  const finalTargetX = targetX + accuracyError;
+
+                  const startX = ball.x;
+                  const startY = ball.y;
+                  const targetY = 155;
+                  const dist = Math.abs(finalTargetX - startX);
+                  const peakY = Math.min(60, Math.min(startY, targetY) - 50 - dist * 0.12);
+
+                  const h_rise = startY - peakY;
+                  const t_rise = Math.sqrt(Math.max(1, (2 * h_rise) / gravity));
+                  const h_fall = targetY - peakY;
+                  const t_fall = Math.sqrt(Math.max(1, (2 * h_fall) / gravity));
+                  const totalTime = t_rise + t_fall;
+
+                  ball.vx = (finalTargetX - startX) / totalTime;
+                  ball.vy = -Math.sqrt(Math.max(1, 2 * gravity * h_rise));
                   ball.lastShotType = 'normal';
                   playSound('rim');
                 }
               }
             }
           }
+
+        // If athlete is actively dashing, force hyper-dash velocities and decrement active timer
+        if (p.dashActiveTimer && p.dashActiveTimer > 0) {
+          p.vx = p.dashDirection === 'right' ? 19 : -19;
+          p.vy = 0;
+          p.dashActiveTimer--;
+          
+          // Generate a premium colorful particle ghost trail
+          if (Math.random() < 0.6) {
+            particles.push({
+              x: p.x + p.width/2 + (Math.random() - 0.5) * 15,
+              y: p.y + p.height/2 + (Math.random() - 0.5) * 20,
+              vx: -p.vx * 0.15,
+              vy: (Math.random() - 0.5) * 2,
+              color: p.team === 'blue' ? '#38bdf8' : '#ec4899',
+              size: Math.random() * 6 + 4,
+              alpha: 0.8,
+              life: 0,
+              maxLife: 20
+            });
+          }
+
+          // Check for pass-through overlap for DASH & STEAL (Perfect Swipe!)
+          players.forEach(victim => {
+            if (victim.team !== p.team && ball.holder && ball.holder.id === victim.id) {
+              const dToOpp = Math.hypot(p.x - victim.x, p.y - victim.y);
+              if (dToOpp < 55) {
+                if (p.isBot) {
+                  // AI tries to perfect-time the swipe! Success probability based on difficulty
+                  const swipeSuccessChance = difficulty === 'easy' ? 0.25 : difficulty === 'medium' ? 0.52 : 0.85;
+                  if (Math.random() < swipeSuccessChance && ball.holder && ball.holder.id === victim.id) {
+                    ball.holder = p;
+                    ball.cooldownHolder = victim;
+                    ball.cooldownTimer = 45;
+                    p.dashActiveTimer = 0; // stop active dash!
+                    victim.isStunned = true;
+                    victim.stunTimer = 65; // stun!
+                    playSound('special');
+                    createSparks(p.x + p.width/2, p.y + p.height/2, '#f59e0b', 22);
+                    splashTriggerRef.current?.("PERFECT STEAL!");
+                  }
+                } else {
+                  // Human perfect timing swipe window!
+                  const isPressingTrigger = p.isP1 
+                    ? (keysPressed.current.has('shift') || keysPressed.current.has(' '))
+                    : (keysPressed.current.has('m') || keysPressed.current.has('M') || keysPressed.current.has(',') || keysPressed.current.has('.') || keysPressed.current.has('/'));
+                  
+                  if (isPressingTrigger && ball.holder && ball.holder.id === victim.id) {
+                    ball.holder = p;
+                    ball.cooldownHolder = victim;
+                    ball.cooldownTimer = 45;
+                    p.dashActiveTimer = 0; // successfully lock on the ball and stop!
+                    victim.isStunned = true;
+                    victim.stunTimer = 70; // stun!
+                    playSound('special');
+                    createSparks(p.x + p.width/2, p.y + p.height/2, '#facc15', 25);
+                    splashTriggerRef.current?.("PERFECT STEAL!");
+                  }
+                }
+              }
+            }
+          });
         }
 
-        // Apply velocities on person
-        p.vy += gravity;
-        p.x += p.vx;
-        p.y += p.vy;
-
-        // Platform ground alignment limits
-        if (p.y > courtFloorY - p.height) {
-          p.y = courtFloorY - p.height;
+        // Apply velocities on person / handle epic dunk cinematic flight trajectory!
+        if (p.isDunking && p.dunkPhase && p.dunkPhase > 0) {
+          p.vx = 0;
           p.vy = 0;
+          
+          p.dunkPhase += 0.035; // increments trajectory (lasts approx 28 frames)
+          const t = p.dunkPhase;
+          
+          if (t >= 1.0) {
+            // SLAM CLIMAX TRIGGER!
+            p.isDunking = false;
+            p.dunkPhase = 0;
+            
+            ball.holder = null;
+            ball.x = p.team === 'blue' ? 786 : 64;
+            ball.y = 175;
+            ball.vx = 0;
+            ball.vy = 8;
+            ball.lastShotType = 'dunk';
+            
+            // Screen Shake trigger!
+            screenShakeTimer = 22;
+            shakeAmplitude = 14;
+            
+            playSound('swish');
+            playSound('cheer');
+            createSparks(ball.x, 160, '#f59e0b', 30);
+            createSparks(ball.x, 160, '#ef4444', 20);
+            splashTriggerRef.current?.(`${p.name.toUpperCase()}: MONSTER DUNK!`);
+            
+            if (p.team === 'blue') setScoreBlue(sc => sc + 3);
+            else setScoreRed(sc => sc + 3);
+            
+            if (p.team === 'blue') {
+              netRightNodes.forEach(node => { node.vy += 15; node.vx += (Math.random() - 0.5) * 16; });
+            } else {
+              netLeftNodes.forEach(node => { node.vy += 15; node.vx += (Math.random() - 0.5) * 16; });
+            }
+            resetBall();
+          } else {
+            // FLYING TRAJECTORY INTERPOLATION
+            const targetHoopX = p.team === 'blue' ? 745 : 105;
+            const targetHoopY = 145;
+            
+            // Start points
+            const startX = p.dunkLaunchX !== undefined ? p.dunkLaunchX : p.x;
+            const startY = p.dunkLaunchY !== undefined ? p.dunkLaunchY : p.y;
+            
+            p.x = startX + (targetHoopX - startX) * t;
+            // High parabolic altitude curve
+            p.y = startY + (targetHoopY - startY) * t - Math.sin(t * Math.PI) * 180;
+            
+            // Draw colorful trail particles at feet/torso
+            if (Math.random() < 0.7) {
+              particles.push({
+                x: p.x + p.width / 2 + (Math.random() - 0.5) * 12,
+                y: p.y + p.height / 2 + (Math.random() - 0.5) * 12,
+                vx: (Math.random() - 0.5) * 3,
+                vy: (Math.random() - 0.5) * 3,
+                color: p.team === 'blue' ? '#38bdf8' : '#ef4444',
+                size: Math.random() * 6 + 4,
+                alpha: 0.85,
+                life: 0,
+                maxLife: 20
+              });
+            }
+            
+            // Keep ball snapped to hands (overhead preparatory pose)
+            if (ball.holder && ball.holder.id === p.id) {
+              ball.x = p.x + (p.facing === 'right' ? 30 : -10);
+              ball.y = p.y - 20;
+            }
+          }
+        } else {
+          // Standard physics update
+          p.vy += gravity;
+          p.x += p.vx;
+          p.y += p.vy;
+          
+          // Platform ground alignment limits
+          if (p.y > courtFloorY - p.height) {
+            p.y = courtFloorY - p.height;
+            p.vy = 0;
+            p.isDunking = false;
+          }
         }
 
         // Left right screen bounds
@@ -1351,36 +1991,23 @@ export default function BasketballStars() {
         }
 
         // --- EXAGGERATED SUPER DUNK MECHANICS TRIGGER ---
-        // Player shoots directly via dunks when extremely close to targeted hoop
+        // If human or AI is close to the hoop, trigger dunk trajectory (P1: T key, P2: shoot/jump, Bot: auto)
         const targetedHoopX = p.team === 'blue' ? 780 : 66;
         const dToHoop = Math.abs(p.x - targetedHoopX);
-        if (ball.holder && ball.holder.id === p.id && dToHoop < 80 && p.y < courtFloorY - 80) {
-          // Play massive action zoom
-          p.isDunking = true;
-          ball.holder = null;
-
-          // Animate super slam jump trajectory immediately
-          ball.x = p.facing === 'right' ? 778 : 66;
-          ball.y = 170;
-          ball.vx = 0;
-          ball.vy = 4;
-          ball.lastShotType = 'dunk';
-
-          // Scoring alert instantly
-          playSound('swish');
-          createSparks(ball.x, ball.y, '#f59e0b', 18);
-          triggerAlert(`${p.name}: CRITICAL SMASH DUNK!`);
+        if (!p.isDunking && !ball.isScoring && ball.holder && ball.holder.id === p.id && dToHoop < 160) {
+          const isDunkPressedP1 = p.isP1 && (keysPressed.current.has('t') || keysPressed.current.has('T'));
+          const isShootPressedP2 = p.isP2 && (keysPressed.current.has('.') || keysPressed.current.has('/'));
+          const isJumpPressedP2 = p.isP2 && keysPressed.current.has('ArrowUp');
           
-          if (p.team === 'blue') setScoreBlue(sc => sc + 3);
-          else setScoreRed(sc => sc + 3);
-
-          if (p.team === 'blue') {
-            netRightNodes.forEach(node => { node.vy += 12; node.vx += (Math.random() - 0.5) * 16; });
-          } else {
-            netLeftNodes.forEach(node => { node.vy += 12; node.vx += (Math.random() - 0.5) * 16; });
+          if (isDunkPressedP1 || isShootPressedP2 || isJumpPressedP2 || p.isBot) {
+            p.isDunking = true;
+            p.dunkPhase = 0.01;
+            p.dunkLaunchX = p.x;
+            p.dunkLaunchY = p.y;
+            ball.holder = p; // Lock ball to hand for trajectory
+            createSparks(p.x, p.y, '#f59e0b', 12);
+            playSound('special');
           }
-
-          resetBall();
         }
 
         // --- PLAYER FLOOR INTERACTIVE DOCKING SHADOWS ---
@@ -1395,17 +2022,25 @@ export default function BasketballStars() {
         
         // Active indicator circle if this is the user p1
         if (p.isP1) {
-          ctx.strokeStyle = 'rgba(34, 211, 238, 0.65)';
-          ctx.lineWidth = 2;
+          ctx.save();
+          ctx.strokeStyle = '#22c55e'; // Bright green halo ring from screenshot
+          ctx.lineWidth = 3.5;
+          ctx.shadowColor = '#22c55e';
+          ctx.shadowBlur = 10;
           ctx.beginPath();
           ctx.ellipse(0, 0, 22 * sScale, 6 * sScale, 0, 0, Math.PI * 2);
           ctx.stroke();
+          ctx.restore();
         } else if (p.isP2) {
-          ctx.strokeStyle = 'rgba(239, 68, 68, 0.65)';
-          ctx.lineWidth = 2;
+          ctx.save();
+          ctx.strokeStyle = '#ef4444'; // Bright red halo ring
+          ctx.lineWidth = 3.5;
+          ctx.shadowColor = '#ef4444';
+          ctx.shadowBlur = 10;
           ctx.beginPath();
           ctx.ellipse(0, 0, 22 * sScale, 6 * sScale, 0, 0, Math.PI * 2);
           ctx.stroke();
+          ctx.restore();
         }
         
         let sGrad = ctx.createRadialGradient(0, 0, 1, 0, 0, 25);
@@ -1426,6 +2061,73 @@ export default function BasketballStars() {
 
         ctx.translate(p.x + p.width / 2, p.y + p.height / 2 + walkBobY + idleBobY);
         ctx.rotate(leanAngle);
+
+        // Check if any opponent is actively dashing during ball possession (Time Swipe Ring!)
+        const isAnOpponentDashing = players.some(item => item.team !== p.team && item.dashActiveTimer !== undefined && item.dashActiveTimer > 0);
+        if (isAnOpponentDashing && ball.holder && ball.holder.id === p.id) {
+          ctx.save();
+          const pulse = Math.abs(Math.sin(Date.now() / 80));
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 3.2 + pulse * 2.5;
+          ctx.shadowColor = '#fbbf24';
+          ctx.shadowBlur = 15;
+          
+          // Outer target rings
+          ctx.beginPath();
+          ctx.arc(0, -15, 30 + pulse * 4, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Rotating crosshairs markings
+          const angleRot = (Date.now() / 150) % (Math.PI * 2);
+          ctx.rotate(angleRot);
+          ctx.strokeStyle = '#f97316';
+          ctx.lineWidth = 2.5;
+          for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a) * 36, Math.sin(a) * 36);
+            ctx.lineTo(Math.cos(a) * 44, Math.sin(a) * 44);
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // Draw the banner text above their head (not rotated so it stays readable!)
+          ctx.save();
+          ctx.fillStyle = '#facc15';
+          ctx.font = '900 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.shadowColor = '#000000';
+          ctx.shadowBlur = 4;
+          // Draw a stylized background tag
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
+          ctx.fillRect(-45, -73, 90, 16);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText("TIME SWIPE!", 0, -60);
+          ctx.restore();
+        }
+
+        // Draw 5s dash cooldown ring overhead if active
+        if (p.dashTimer > 0 && (p.isP1 || p.isP2)) {
+          ctx.save();
+          ctx.translate(0, -85);
+          
+          // Outer gray container
+          ctx.strokeStyle = 'rgba(15, 23, 42, 0.55)';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, 7.5, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Green/Purple active percentage sector
+          ctx.strokeStyle = '#a855f7'; // Purple dash theme
+          ctx.lineWidth = 3.5;
+          ctx.lineCap = 'round';
+          const pct = p.dashTimer / 300; // 300 frame ticks is full 5s
+          ctx.beginPath();
+          ctx.arc(0, 0, 7.5, -Math.PI / 2, -Math.PI / 2 + (pct) * Math.PI * 2);
+          ctx.stroke();
+
+          ctx.restore();
+        }
 
         // Slowmo freeze ice block covering overlay glows
         if (p.isStunned) {
@@ -2070,26 +2772,91 @@ export default function BasketballStars() {
         }
 
         // Passives block snatch overlap checking
-        players.forEach(p => {
-          if (p.isStunned) return;
-          if (ball.cooldownHolder && ball.cooldownHolder.id === p.id && ball.cooldownTimer > 0) {
-            return;
-          }
+        // Prevent grabbing the ball while it's in a scoring/reset state to avoid duplicate score triggers
+        if (!ball.isScoring) {
+          players.forEach(p => {
+            if (p.isStunned) return;
+            if (ball.cooldownHolder && ball.cooldownHolder.id === p.id && ball.cooldownTimer > 0) {
+              return;
+            }
 
-          // Distance logic
-          const dToSphere = Math.hypot(p.x + p.width / 2 - ball.x, p.y + p.height / 2 - ball.y);
-          if (dToSphere < 36) {
-            // Snatch sphere!
-            ball.holder = p;
-            ball.lastTeamTouch = p.team;
-            playSound('bounce');
-            createSparks(ball.x, ball.y, p.color, 6);
+            // Distance logic
+            const dToSphere = Math.hypot(p.x + p.width / 2 - ball.x, p.y + p.height / 2 - ball.y);
+            if (dToSphere < 36) {
+              // Snatch sphere!
+              ball.holder = p;
+              ball.lastTeamTouch = p.team;
+              playSound('bounce');
+              createSparks(ball.x, ball.y, p.color, 6);
+            }
+          });
+        }
+
+        // --- 3D HIGH-FIDELITY RIM AND BACKBOARD COLLISION ENGINE ---
+        // Left Backboard (vertical glass wall at x = 48 from y = 85 to 220)
+        if (ball.vx < 0 && ball.x - ball.radius < 48 && ball.x + ball.radius > 32 && ball.y >= 85 && ball.y <= 220) {
+          ball.x = 48 + ball.radius;
+          ball.vx = -ball.vx * 0.62;
+          playSound('rim');
+          createSparks(48, ball.y, '#22d3ee', 6);
+        }
+        // Right Backboard (vertical glass wall at x = 802 from y = 85 to 220)
+        if (ball.vx > 0 && ball.x + ball.radius > 802 && ball.x - ball.radius < 818 && ball.y >= 85 && ball.y <= 220) {
+          ball.x = 802 - ball.radius;
+          ball.vx = -ball.vx * 0.62;
+          playSound('rim');
+          createSparks(802, ball.y, '#22d3ee', 6);
+        }
+
+        // Rim Point Collisions (circular boundary bounces)
+        // If ball is scoring, bypass rim point collisions to allow clean insertion
+        const isScoringLeft = ball.vy > 0 && ball.y >= 148 && ball.y <= 210 && ball.x > 50 && ball.x < 78;
+        const isScoringRight = ball.vy > 0 && ball.y >= 148 && ball.y <= 210 && ball.x > 772 && ball.x < 800;
+
+        const checkRimCollision = (rimX: number, rimY: number) => {
+          const dx = ball.x - rimX;
+          const dy = ball.y - rimY;
+          const dist = Math.hypot(dx, dy);
+          const touchDist = ball.radius + 3; // contact depth
+          if (dist < touchDist) {
+            const nx = dx / (dist || 1);
+            const ny = dy / (dist || 1);
+            ball.x = rimX + nx * touchDist;
+            ball.y = rimY + ny * touchDist;
+            
+            const dot = ball.vx * nx + ball.vy * ny;
+            ball.vx = (ball.vx - 2 * dot * nx) * 0.64;
+            ball.vy = (ball.vy - 2 * dot * ny) * 0.64;
+            playSound('rim');
+            createSparks(rimX, rimY, '#ef4444', 5);
           }
-        });
+        };
+
+        if (!isScoringLeft && !ball.isScoring) {
+          checkRimCollision(48, 160); // Inner left rim hook
+          checkRimCollision(80, 160); // Outer left rim tip
+        }
+        if (!isScoringRight && !ball.isScoring) {
+          checkRimCollision(802, 160); // Inner right rim hook
+          checkRimCollision(770, 160); // Outer right rim tip
+        }
+
+        // Net Funneling Physics: trap and slide ball elegantly downwards inside net thread
+        if (ball.y >= 152 && ball.y <= 212) {
+          if (ball.x > 49 && ball.x < 79) {
+            // Settle towards center of left net (x = 64)
+            ball.vx = ball.vx * 0.82 + (64 - ball.x) * 0.12;
+            ball.vy = Math.min(ball.vy, 2.5) * 0.94 + 0.12; // slow squeeze drag
+          } else if (ball.x > 771 && ball.x < 801) {
+            // Settle towards center of right net (x = 786)
+            ball.vx = ball.vx * 0.82 + (786 - ball.x) * 0.12;
+            ball.vy = Math.min(ball.vy, 2.5) * 0.94 + 0.12; // slow squeeze drag
+          }
+        }
 
         // Left basket score circle trigger detection
-        const lRimCenter = 66;
-        if (ball.vy > 0 && ball.y >= 155 && ball.y <= 165 && ball.x > lRimCenter - 18 && ball.x < lRimCenter + 18) {
+        const lRimCenter = 64;
+        if (!ball.isScoring && ball.vy > 0 && ball.y >= 155 && ball.y <= 165 && ball.x > lRimCenter - 16 && ball.x < lRimCenter + 16) {
           // Point!
           setScoreRed(s => s + (ball.lastShotType === 'super' ? 3 : 2));
           createSparks(lRimCenter, 160, '#ef4444', 18);
@@ -2103,8 +2870,8 @@ export default function BasketballStars() {
         }
 
         // Right basket score circle trigger detection
-        const rRimCenter = 784;
-        if (ball.vy > 0 && ball.y >= 155 && ball.y <= 165 && ball.x > rRimCenter - 18 && ball.x < rRimCenter + 18) {
+        const rRimCenter = 786;
+        if (!ball.isScoring && ball.vy > 0 && ball.y >= 155 && ball.y <= 165 && ball.x > rRimCenter - 16 && ball.x < rRimCenter + 16) {
           // Point!
           setScoreBlue(s => s + (ball.lastShotType === 'super' ? 3 : 2));
           createSparks(rRimCenter, 160, '#38bdf8', 18);
@@ -2279,9 +3046,23 @@ export default function BasketballStars() {
         ctx.fillText(activeSplashText, 0, 0);
         ctx.restore();
       }
+
+      ctx.restore(); // Restore global context translation after shake
+
+      // Live sync Player 1 super meter to React state
+      const p1Obj = players.find(p => p.isP1);
+      if (p1Obj) {
+        const currentMeterVal = Math.round(p1Obj.superMeter);
+        if (currentMeterVal !== lastP1SuperMeterRef.current) {
+          lastP1SuperMeterRef.current = currentMeterVal;
+          setP1SuperMeter(currentMeterVal);
+        }
+      }
     };
 
     const resetBall = () => {
+      if (ball.isScoring) return; // Prevent overlapping resets or re-entrant scoring events
+      ball.isScoring = true;
       setTimeout(() => {
         ball.x = 425;
         ball.y = 110;
@@ -2289,17 +3070,19 @@ export default function BasketballStars() {
         ball.vy = 0;
         ball.holder = null;
         ball.cooldownHolder = null;
+        ball.isScoring = false;
         players.forEach((p, idx) => {
           p.x = p.team === 'blue' ? 180 + idx * 40 : 640 - idx * 40;
           p.y = courtFloorY - 60;
           p.vx = 0;
           p.vy = 0;
           p.isStunned = false;
+          p.isDunking = false;
         });
       }, 1500);
     };
 
-    processFrame();
+    processFrame(performance.now());
 
     return () => {
       cancelAnimationFrame(animId);
@@ -2314,61 +3097,138 @@ export default function BasketballStars() {
       {/* Live HUD Match Scoring */}
       {gameState === 'playing' && (
         <div className="absolute top-3 left-6 right-6 z-10 flex items-center justify-between pointer-events-none">
-          {/* Left Wing Support Controls: Sfx Mute */}
-          <button 
-            onClick={() => setSoundEnabled(prev => !prev)}
-            className="pointer-events-auto p-3 bg-slate-950/90 border border-sky-500/30 rounded-2xl hover:bg-sky-500/20 shadow-lg text-sky-400 transition-all flex items-center justify-center cursor-pointer"
-            title="Toggle SFX Synth"
-          >
-            {soundEnabled ? <Volume2 className="w-4 h-4 animate-bounce" /> : <VolumeX className="w-4 h-4" />}
-          </button>
-
-          {/* BEAUTIFUL METALLIC PILL SCOREBOARD CONTAINER */}
-          <div className="relative bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-4 border-slate-950 rounded-[2.2rem] px-8 py-2 flex items-center gap-6 shadow-[0_12px_40px_rgba(0,0,0,0.85),0_0_20px_rgba(14,165,233,0.15)] select-none">
+          {/* Left Circular Special Power Meter */}
+          <div className="pointer-events-auto flex items-center gap-3">
+            <div className="relative w-18 h-18 rounded-full border-4 border-white/95 bg-[#0e021a] flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.85)] overflow-hidden">
+              {/* Inner dynamic fire energy fill based on Player 1's real super meter state */}
+              <div 
+                className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-purple-700 via-pink-500 to-amber-400 opacity-90 transition-all duration-300"
+                style={{ height: `${p1SuperMeter}%` }}
+              />
+              
+              {/* Vector caricature head overlay of selected character */}
+              <div className="relative z-10 scale-110 active:scale-125 transition-transform">
+                <HUDPlayerHead charId={selectedCharId} />
+              </div>
+              
+              {/* Z letter dynamic action badge */}
+              <div className={`absolute bottom-0.5 left-0.5 border border-white rounded-full w-5.5 h-5.5 flex items-center justify-center text-[11px] font-black text-white shadow-md z-20 transition-all ${
+                p1SuperMeter >= 100 
+                  ? 'bg-gradient-to-b from-yellow-400 to-amber-500 animate-pulse scale-110 shadow-[0_0_8px_#facc15]' 
+                  : 'bg-gradient-to-b from-orange-400 to-orange-600'
+              }`}>
+                Z
+              </div>
+            </div>
             
-            {/* Ambient Gold Decorative left Ring */}
-            <div className="w-10 h-10 rounded-full border border-amber-400/30 bg-amber-500/10 flex items-center justify-center">
-              <span className="text-amber-400 text-xs font-black animate-spin">★</span>
-            </div>
-
-            {/* Main Digital Score Counters & Green Ticking Timer */}
-            <div className="flex flex-col items-center">
-              <div className="flex items-center gap-8 px-5 py-0.5 bg-black border border-slate-800 rounded-xl">
-                {/* BLUE TEAM SCORE (GLOWING ORANGE LED) */}
-                <span className="font-mono text-3xl font-black text-amber-500 tracking-wider drop-shadow-[0_0_8px_rgba(245,158,11,0.7)]">
-                  {scoreBlue}
-                </span>
-
-                {/* Score dividing dot */}
-                <span className="text-sky-500/50 font-black text-sm">:</span>
-
-                {/* RED TEAM SCORE (GLOWING ORANGE LED) */}
-                <span className="font-mono text-3xl font-black text-amber-500 tracking-wider drop-shadow-[0_0_8px_rgba(245,158,11,0.7)]">
-                  {scoreRed}
-                </span>
-              </div>
-
-              {/* Cyan/Green glow digital timer decimals */}
-              <div className="mt-1 px-3 py-0.5 bg-black border border-emerald-950 rounded-lg">
-                <span className="font-mono text-xs font-extrabold text-emerald-400 tracking-widest drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]">
-                  {timeLeft}.{Math.floor((Date.now() / 100) % 10)}
-                </span>
-              </div>
-            </div>
-
-            {/* Ambient Cyan Decorative right Ring */}
-            <div className="w-10 h-10 rounded-full border border-cyan-400/30 bg-cyan-500/10 flex items-center justify-center">
-              <span className="text-cyan-400 text-xs font-bold leading-none">🌐</span>
+            <div className="flex flex-col">
+              <span className="text-[8px] font-black text-amber-400 tracking-wider">SUPER POWER</span>
+              <span className={`text-[10px] font-mono font-black italic leading-none uppercase transition-all ${
+                p1SuperMeter >= 100 
+                  ? 'text-yellow-400 animate-pulse drop-shadow-[0_0_4px_rgba(250,204,21,0.8)]' 
+                  : 'text-purple-400/80'
+              }`}>
+                {p1SuperMeter >= 100 ? 'READY !!' : `CHARGING (${p1SuperMeter}%)`}
+              </span>
             </div>
           </div>
 
-          {/* Right Wing Support Controls: Forfeit */}
-          <button 
-            onClick={() => setGameState('menu')}
-            className="pointer-events-auto px-4 py-2.5 bg-rose-950/90 border border-rose-500/40 rounded-xl hover:bg-rose-500/35 hover:scale-105 shadow-lg text-rose-400 text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
-          >
-            Forfeit
-          </button>
+          {/* SCREENSHOT ACCURATE HIGH-FIDELITY SEGMENT SCOREBOARD */}
+          <div className="relative flex flex-col items-center pointer-events-none">
+            <div className="relative bg-[#060114]/90 border-[3.5px] border-[#6d28d9] rounded-[2.3rem] px-4 py-1.5 flex items-center gap-3.5 shadow-[0_6px_25px_rgba(0,0,0,0.85),0_0_15px_rgba(139,92,246,0.5)] select-none">
+              
+              {/* Left Team Logo: LOS ANGELES LAKES */}
+              <div className="flex items-center gap-2.5 bg-[#4c1d95]/50 border border-amber-500/30 px-3.5 py-1.5 rounded-full shadow-lg">
+                {/* LAKES SVG custom basketball emblem */}
+                <svg className="w-9 h-9" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="50" cy="50" r="40" fill="#f97316" stroke="#ffffff" strokeWidth="2" />
+                  <path d="M20 50C35 40 65 40 80 50" stroke="#000000" strokeWidth="2.5" fill="none" />
+                  <path d="M20 50C35 60 65 60 80 50" stroke="#000000" strokeWidth="2.5" fill="none" />
+                  <path d="M50 10C45 35 45 65 50 90" stroke="#000000" strokeWidth="2.5" fill="none" />
+                  <rect x="5" y="38" width="90" height="24" fill="#6d28d9" stroke="#ffffff" strokeWidth="1.5" rx="4" transform="rotate(-5 50 50)" />
+                  <text x="50" y="55" fill="#facc15" fontSize="13" fontWeight="900" fontStyle="italic" textAnchor="middle" transform="rotate(-5 50 50)">LAKES</text>
+                </svg>
+                <div className="flex flex-col text-left">
+                  <span className="text-[7px] font-black text-amber-400 tracking-[0.08em] leading-none uppercase">LOS ANGELES</span>
+                  <span className="text-[12px] font-black text-white italic tracking-tighter leading-none font-sans uppercase">LAKES</span>
+                </div>
+              </div>
+
+              {/* High precision Retro 7-Segment scoring digits */}
+              <div className="flex items-center gap-3 px-3.5 py-1.5 bg-[#060114] border-2 border-[#581c87] rounded-2xl shadow-inner shadow-black">
+                <div className="flex gap-1 bg-[#0c0420] p-1.5 rounded-lg border border-[#3b1154]">
+                  {scoreBlue > 9 && <SevenSegmentDigit value={Math.floor(scoreBlue / 10)} color="#ff9f00" />}
+                  <SevenSegmentDigit value={scoreBlue % 10} color="#ff9f00" />
+                </div>
+                <span className="text-[#8b5cf6]/80 font-black text-lg select-none leading-none scale-y-75">-</span>
+                <div className="flex gap-1 bg-[#0c0420] p-1.5 rounded-lg border border-[#3b1154]">
+                  {scoreRed > 9 && <SevenSegmentDigit value={Math.floor(scoreRed / 10)} color="#ff9f00" />}
+                  <SevenSegmentDigit value={scoreRed % 10} color="#ff9f00" />
+                </div>
+              </div>
+
+              {/* Right Team Logo: GOLDEN STATE CALIFORNIA */}
+              <div className="flex items-center gap-2.5 bg-[#0c2340]/65 border border-blue-500/30 px-3.5 py-1.5 rounded-full shadow-lg">
+                <div className="flex flex-col text-right">
+                  <span className="text-[7px] font-black text-sky-400 tracking-[0.08em] leading-none uppercase">GOLDEN STATE</span>
+                  <span className="text-[12px] font-black text-white italic tracking-tighter leading-none font-sans uppercase">CALIFORNIA</span>
+                </div>
+                {/* Golden Gate bridge design SVG */}
+                <svg className="w-9 h-9" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="50" cy="50" r="40" fill="#1d4ed8" stroke="#facc15" strokeWidth="2.5" />
+                  <path d="M20 60C35 30 65 30 80 60" stroke="#facc15" strokeWidth="4.5" fill="none" />
+                  <line x1="30" y1="46" x2="30" y2="60" stroke="#facc15" strokeWidth="2.5" />
+                  <line x1="40" y1="38" x2="40" y2="60" stroke="#facc15" strokeWidth="2.5" />
+                  <line x1="50" y1="36" x2="50" y2="60" stroke="#facc15" strokeWidth="2.5" />
+                  <line x1="60" y1="38" x2="60" y2="60" stroke="#facc15" strokeWidth="2.5" />
+                  <line x1="70" y1="46" x2="70" y2="60" stroke="#facc15" strokeWidth="2.5" />
+                  <line x1="15" y1="60" x2="85" y2="60" stroke="#facc15" strokeWidth="3" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Glowing toxic neon green digital timer capsule hanging beneath */}
+            <div className="mt-[-10px] bg-[#0c0420] border-2 border-[#8b5cf6] rounded-full px-5 py-0.5 shadow-md flex items-center justify-center z-10 shadow-black">
+              <span className="font-mono text-sm font-black text-[#58fa58] tracking-widest drop-shadow-[0_0_8px_rgba(88,250,88,0.95)] select-none">
+                {timeLeft}.{Math.floor((Date.now() / 100) % 10)}
+              </span>
+            </div>
+          </div>
+
+          {/* Right Action Arcade Controls */}
+          <div className="pointer-events-auto flex items-center gap-2">
+            {/* Info button */}
+            <button 
+              onClick={() => triggerAlert("P1: WASD to Run/Jump, SPACE to Shoot, T to Dunk, SHIFT to Steal. | Avoid penalties!")}
+              className="w-10 h-10 bg-[#170e2b] hover:bg-[#2e1954] border-2 border-white text-white flex items-center justify-center rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-all text-sm font-black cursor-pointer shadow-purple-950/50"
+              title="Help Options"
+            >
+              ?
+            </button>
+            {/* Pause option */}
+            <button 
+              onClick={() => triggerAlert("Match Paused - click OK to Resume")}
+              className="w-10 h-10 bg-[#170e2b] hover:bg-[#2e1954] border-2 border-white text-white flex items-center justify-center rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-all text-xs font-black cursor-pointer shadow-purple-950/50"
+              title="Pause Match"
+            >
+              ||
+            </button>
+            {/* Sound toggle */}
+            <button 
+              onClick={() => setSoundEnabled(prev => !prev)}
+              className="w-10 h-10 bg-[#170e2b] hover:bg-[#2e1954] border-2 border-white text-white flex items-center justify-center rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-all text-sm font-sans font-black cursor-pointer shadow-purple-950/50"
+              title="Toggle Audio Synth"
+            >
+              {soundEnabled ? '♫' : 'Mute'}
+            </button>
+            {/* Forfeit */}
+            <button 
+              onClick={() => setGameState('menu')}
+              className="px-3.5 py-2.5 bg-gradient-to-r from-red-950 to-rose-900 border-2 border-white rounded-xl hover:brightness-110 hover:scale-105 shadow-md shadow-red-950/50 text-red-200 text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+            >
+              Forfeit
+            </button>
+          </div>
         </div>
       )}
 
@@ -2412,7 +3272,7 @@ export default function BasketballStars() {
           
           {/* Controls instructions bar helper inside layout */}
           <div className="absolute bottom-1 bg-slate-950/80 backdrop-blur-md px-6 py-2 rounded-xl text-[10px] text-slate-400 border border-slate-800 flex gap-6 uppercase tracking-wider">
-            <div><span className="text-sky-400 font-bold">P1 (BLUE) CONTROLS:</span> WASD = JUMP / RUN | SPACE = SHOOT / FAST DUNKS | SHIFT = STEAL</div>
+            <div><span className="text-sky-400 font-bold">P1 (BLUE) CONTROLS:</span> WASD = JUMP / RUN | SPACE = SHOOT | T = EPIC DUNKS | SHIFT = STEAL</div>
             {gameMode === 'pvp' && (
               <div><span className="text-rose-400 font-bold">P2 (RED) CONTROLS:</span> ARROWS = JUMP / RUN | . = SHOOT / DUNKS | M = SWIPE STEAL</div>
             )}
@@ -2422,74 +3282,185 @@ export default function BasketballStars() {
 
       {/* Game Idle Menu Section */}
       {gameState === 'menu' && (
-        <div className="absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-8 z-30 overflow-y-auto">
-          <div className="max-w-xl w-full text-center">
-            {/* Trophy Icon indicator */}
-            <div className="w-20 h-20 bg-sky-500/10 rounded-3xl border border-sky-500/30 flex items-center justify-center mx-auto mb-6">
-              <Trophy className="w-10 h-10 text-sky-400 animate-pulse" />
+        <div className="absolute inset-0 bg-[#160024] flex flex-col items-center justify-center p-8 z-30 overflow-y-auto relative select-none">
+          {/* Animated decorative floating retro neon stars behind menu */}
+          <div className="absolute inset-0 overflow-hidden opacity-30 pointer-events-none">
+            <div className="absolute top-[10%] left-[15%] text-pink-500 text-3xl animate-pulse">★</div>
+            <div className="absolute top-[20%] right-[20%] text-purple-500 text-2xl animate-pulse delay-75">★</div>
+            <div className="absolute bottom-[25%] left-[25%] text-pink-400 text-xl animate-pulse delay-150">★</div>
+            <div className="absolute bottom-[15%] right-[10%] text-purple-400 text-4xl animate-pulse delay-300">★</div>
+            <div className="absolute top-[45%] left-[8%] text-purple-300 text-lg animate-pulse delay-500">★</div>
+            <div className="absolute top-[60%] right-[5%] text-pink-300 text-2xl animate-pulse">★</div>
+          </div>
+
+          {/* Upper Right Action Buttons */}
+          <div className="absolute top-4 right-4 flex items-center gap-2 pointer-events-auto z-20">
+            {/* Trophy icon */}
+            <button 
+              onClick={() => triggerAlert("HIGH SCORE: Beat the bot teams in 1v1 and 2v2 modes!")}
+              className="w-10 h-10 bg-[#3b82f6] hover:bg-[#1d4ed8] border-2 border-white rounded-xl flex items-center justify-center text-white font-black hover:scale-105 active:scale-95 transition-all text-sm shadow-md cursor-pointer"
+              title="Show High Score"
+            >
+              🏅
+            </button>
+            <button 
+              onClick={() => setSoundEnabled(prev => !prev)}
+              className="w-10 h-10 bg-[#3b82f6] hover:bg-[#1d4ed8] border-2 border-white rounded-xl flex items-center justify-center text-white font-sans font-bold hover:scale-105 active:scale-95 transition-all text-lg shadow-md cursor-pointer"
+              title="Toggle Audio Synth"
+            >
+              {soundEnabled ? '♫' : 'Mute'}
+            </button>
+          </div>
+
+          {/* Giant Retro Bubble Title Block with background basketball */}
+          <div className="relative mb-6 select-none flex justify-center items-center h-44 w-full">
+            {/* Pulsating glowing orange basketball behind title */}
+            <div className="absolute w-36 h-36 rounded-full bg-gradient-to-tr from-[#ea580c] via-[#f97316] to-[#fdba74] border-4 border-slate-950 flex flex-col justify-between p-2 shadow-[0_0_35px_rgba(249,115,22,0.45)] animate-pulse overflow-hidden">
+              {/* Basketball ribbed lines */}
+              <div className="absolute inset-0 border-2 border-slate-950/20 rounded-full" />
+              <div className="absolute top-1/2 left-0 right-0 h-1 bg-slate-950 opacity-40 transform -translate-y-1/2" />
+              <div className="absolute top-0 bottom-0 left-1/2 w-1 bg-slate-950 opacity-40 transform -translate-x-1/2" />
+              <div className="absolute inset-4 border-2 border-slate-950 opacity-30 rounded-full" />
             </div>
 
-            <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-amber-300 to-sky-500 tracking-tighter italic uppercase mb-2">
-              BASKETBALL STARS
-            </h1>
-            <p className="text-[10px] text-sky-500 font-black tracking-[0.25em] mb-8 uppercase">
-              CARTOON ARCADE 1V1 & 2V2 SPLIT CLASSIC
-            </p>
+            {/* Overlapping double layered comic typography */}
+            <div className="relative flex flex-col items-center justify-center transform -rotate-2">
+              {/* "BASKETBALL" in heavy blue bubble letters */}
+              <h1 className="text-6xl font-black tracking-tight uppercase select-none relative font-sans text-center leading-none">
+                {/* Outer magenta shadow glow layer */}
+                <span className="absolute left-1.5 top-1.5 text-[#ec4899] font-black uppercase text-6xl tracking-tight filter drop-shadow-[0_4px_12px_rgba(236,72,153,0.9)] opacity-95">
+                  BASKETBALL
+                </span>
+                {/* Black thick border layer */}
+                <span className="absolute left-0 top-0 text-slate-950 font-black uppercase text-6xl tracking-tight select-none">
+                  BASKETBALL
+                </span>
+                {/* Front active sky-blue layer */}
+                <span className="relative text-transparent bg-clip-text bg-gradient-to-b from-[#38bdf8] to-[#0369a1] font-black uppercase text-6xl tracking-tight [text-shadow:_0_2px_0_#ffffff]">
+                  BASKETBALL
+                </span>
+              </h1>
 
-            {/* Select Game Mode row */}
-            <h4 className="text-xs text-slate-500 font-black mb-3 tracking-widest uppercase">SELECT MATCH MODE</h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-              {(['1v1', '2v2', 'pvp'] as const).map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => setGameMode(mode)}
-                  className={`py-3.5 rounded-2xl font-black uppercase text-xs tracking-wider border transition-all ${
-                    gameMode === mode
-                      ? 'bg-sky-600 border-sky-400 text-white shadow-[0_0_15px_rgba(14,165,233,0.35)]'
-                      : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-900'
-                  }`}
-                >
-                  {mode === '1v1' ? '1v1 Solo AI' : mode === '2v2' ? '2v2 Chaos' : 'Local PvP (1vs1)'}
-                </button>
-              ))}
+              {/* "Stars" overlapping at bottom right angled cursive */}
+              <h2 className="text-5xl font-black italic tracking-wide select-none absolute bottom-[-18px] right-2 transform rotate-6 leading-none">
+                {/* Purple bottom glow */}
+                <span className="absolute left-1 top-1 text-[#f472b6] font-black italic text-5xl tracking-wide select-none filter opacity-90">
+                  Stars
+                </span>
+                {/* Front yellow-green layer */}
+                <span className="relative text-transparent bg-clip-text bg-gradient-to-b from-[#a3e635] to-[#4d7c0f] font-black italic text-5xl tracking-wide">
+                  Stars
+                </span>
+              </h2>
+            </div>
+          </div>
+
+          {/* Central Felt-Pad purple Options container */}
+          <div className="relative w-full max-w-sm mx-auto bg-gradient-to-b from-[#481165]/95 to-[#2d023a]/95 border-4 border-white/90 rounded-[2.5rem] p-6 shadow-[0_12px_45px_rgba(0,0,0,0.8)] z-10 flex flex-col items-center gap-4">
+            {/* Curry peeking on far left */}
+            <div className="absolute left-[-85px] top-[26%] z-[-2] pointer-events-none transform -scale-x-100 rotate-6">
+              <CurryPeeking />
+            </div>
+
+            {/* LeBron peeking on far right */}
+            <div className="absolute right-[-85px] top-[24%] z-[-2] pointer-events-none transform rotate-[-6deg]">
+              <LeBronPeeking />
+            </div>
+
+            {/* Stack of the requested options buttons */}
+            <div className="flex flex-col gap-3 w-full">
+              {/* 1 PLAYER Button */}
               <button
-                onClick={() => { setGameMode('1v1'); setGameState('tournament_tree'); setTournamentRound(1); }}
-                className="py-3.5 rounded-2xl font-black uppercase text-xs tracking-wider border bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 border-amber-400 hover:brightness-105 transition-all flex items-center justify-center gap-1.5"
+                onClick={() => {
+                  setGameMode('1v1');
+                  setGameState('charSelect');
+                  playSound('special');
+                }}
+                className="group relative w-full py-3.5 bg-gradient-to-b from-[#0ea5e9] to-[#0284c7] hover:brightness-105 rounded-3xl border-3 border-white text-center shadow-lg transition-all active:scale-95 cursor-pointer overflow-hidden transform hover:-translate-y-0.5"
               >
-                <Award className="w-4 h-4 text-slate-950" />
-                Tournament
+                <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="font-sans font-black text-white text-lg uppercase tracking-wider drop-shadow-[0_2.2px_0_#ec4899] italic [text-shadow:_0_1.5px_0_#ec4899,_0_-1.5px_0_#ec4899,_1.5px_0_0_#ec4899] leading-none">
+                  1 PLAYER
+                </span>
+              </button>
+
+              {/* 2 PLAYERS Button */}
+              <button
+                onClick={() => {
+                  setGameMode('pvp');
+                  setGameState('charSelect');
+                  playSound('special');
+                }}
+                className="group relative w-full py-3.5 bg-gradient-to-b from-[#0ea5e9] to-[#0284c7] hover:brightness-105 rounded-3xl border-3 border-white text-center shadow-lg transition-all active:scale-95 cursor-pointer overflow-hidden transform hover:-translate-y-0.5"
+              >
+                <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="font-sans font-black text-white text-lg uppercase tracking-wider drop-shadow-[0_2.2px_0_#ec4899] italic [text-shadow:_0_1.5px_0_#ec4899,_0_-1.5px_0_#ec4899,_1.5px_0_0_#ec4899] leading-none">
+                  2 PLAYERS
+                </span>
+              </button>
+
+              {/* QUICK MATCH Button - triggers instant random arena match */}
+              <button
+                onClick={() => {
+                  const selection1 = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)].id;
+                  const remainingChars = CHARACTERS.filter(c => c.id !== selection1);
+                  const selection2 = remainingChars[Math.floor(Math.random() * remainingChars.length)].id;
+                  
+                  setSelectedCharId(selection1);
+                  setSelectedCharIdP2(selection2);
+                  setGameMode('1v1');
+                  playSound('special');
+                  startMatch();
+                }}
+                className="group relative w-full py-3.5 bg-gradient-to-b from-[#a3e635] to-[#65a30d] hover:brightness-105 rounded-3xl border-3 border-white text-center shadow-lg transition-all active:scale-95 cursor-pointer overflow-hidden transform hover:-translate-y-0.5"
+              >
+                <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="font-sans font-black text-[#1e3a1e] text-lg uppercase tracking-wider drop-shadow-[0_2.2px_0_#e11d48] italic [text-shadow:_0_1.5px_0_#e11d48,_0_-1.5px_0_#e11d48,_1.5px_0_0_#e11d48] leading-none">
+                  QUICK MATCH
+                </span>
+              </button>
+
+              {/* CREDITS Button */}
+              <button
+                onClick={() => {
+                  triggerAlert("CREATED BY YEP10 ARCADE LABS! THANKS FOR PLAYING!");
+                }}
+                className="group relative w-full py-3.5 bg-gradient-to-b from-[#0ea5e9] to-[#0284c7] hover:brightness-105 rounded-3xl border-3 border-white text-center shadow-lg transition-all active:scale-95 cursor-pointer overflow-hidden transform hover:-translate-y-0.5"
+              >
+                <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="font-sans font-black text-white text-lg uppercase tracking-wider drop-shadow-[0_2.2px_0_#ec4899] italic [text-shadow:_0_1.5px_0_#ec4899,_0_-1.5px_0_#ec4899,_1.5px_0_0_#ec4899] leading-none">
+                  CREDITS
+                </span>
               </button>
             </div>
 
-            {/* Select difficulty if not PvP local */}
-            {gameMode !== 'pvp' && (
-              <div className="mb-8">
-                <h4 className="text-xs text-slate-500 font-black mb-3 tracking-widest uppercase">COMPUTER DIFFICULTY</h4>
-                <div className="flex justify-center gap-3">
-                  {(['easy', 'medium', 'pro'] as const).map(diff => (
-                    <button
-                      key={diff}
-                      onClick={() => setDifficulty(diff)}
-                      className={`px-5 py-2.5 rounded-xl font-bold uppercase text-xs tracking-wider border transition-all ${
-                        difficulty === diff
-                          ? 'bg-amber-500 border-amber-400 text-slate-950 font-black'
-                          : 'bg-slate-900/40 border-slate-800 text-slate-500 hover:bg-slate-900'
-                      }`}
-                    >
-                      {diff}
-                    </button>
-                  ))}
-                </div>
+            {/* In-Menu computer difficulty choice */}
+            <div className="w-full mt-2 border-t border-white/10 pt-3 flex flex-col items-center">
+              <span className="text-[10px] font-black tracking-widest text-[#a3e635] uppercase mb-1.5">CPU SKILL</span>
+              <div className="flex gap-2">
+                {(['easy', 'medium', 'pro'] as const).map(diff => (
+                  <button
+                    key={diff}
+                    onClick={() => { setDifficulty(diff); playSound('rim'); }}
+                    className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase border transition-all ${
+                      difficulty === diff
+                        ? 'bg-[#a3e635] border-white text-purple-950'
+                        : 'bg-black/40 border-white/10 text-white/60 hover:bg-black/60'
+                    }`}
+                  >
+                    {diff}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
+          </div>
 
-            <button
-              onClick={() => { setGameState('charSelect'); playSound('special'); }}
-              className="w-full py-4 bg-sky-500 hover:bg-sky-400 text-slate-950 font-black uppercase rounded-2xl transition-all tracking-[0.1em] shadow-[0_4px_25px_rgba(14,165,233,0.25)] flex items-center justify-center gap-2 text-md border-b-4 border-sky-700"
-            >
-              <Play className="w-5 h-5 fill-slate-950" />
-              CHOOSE YOUR SUPERSTAR
-            </button>
+          {/* Bottom Left Version indicator and Bottom Right Branding Badge */}
+          <div className="absolute bottom-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
+            <span className="text-xs font-bold text-white/50 tracking-wide font-mono select-none">
+              v1.0.7
+            </span>
+            <Yep10Badge />
           </div>
         </div>
       )}

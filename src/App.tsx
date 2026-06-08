@@ -23,7 +23,8 @@ import {
   ShieldAlert,
   User,
   Maximize2,
-  Gamepad2
+  Gamepad2,
+  Flame
 } from 'lucide-react';
 import { GAMES, Game, CATEGORIES } from './constants';
 import AuthPage from './components/AuthPage';
@@ -45,8 +46,10 @@ import VoltRacing from './games/VoltRacing';
 import GhostProtocol from './games/GhostProtocol';
 import CryptoClimb from './games/CryptoClimb';
 import BasketballStars from './games/BasketballStars';
+import DummyWorldCup from './games/DummyWorldCup';
 import GenericGame from './components/GenericGame';
 import MathRevision from './components/MathRevision';
+import GoonCorner from './components/GoonCorner';
 
 function ErrorFallback({ error }: { error: any }) {
   return (
@@ -98,7 +101,7 @@ function ErrorFallback({ error }: { error: any }) {
 }
 
 function AppContent() {
-  const [view, setView] = useState<'home' | 'game'>('home');
+  const [view, setView] = useState<'home' | 'game' | 'goon-corner'>('home');
 // ...
   const [activeGame, setActiveGame] = useState<Game | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -281,6 +284,7 @@ function AppContent() {
            activeGame.id === 'ghostprotocol' ? <GhostProtocol /> :
            activeGame.id === 'cryptoclimb' ? <CryptoClimb /> :
            activeGame.id === 'basketballstars' ? <BasketballStars /> :
+           activeGame.id === 'dummiesworldcup' ? <DummyWorldCup /> :
            activeGame.url ? (
              <iframe 
                src={activeGame.url} 
@@ -347,16 +351,31 @@ function AppContent() {
           <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div 
-              className="flex items-center gap-2 cursor-pointer"
-              onClick={() => setView('home')}
-            >
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-200">
-                <Gamepad2 className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-4 sm:gap-6">
+              <div 
+                className="flex items-center gap-2 cursor-pointer shrink-0"
+                onClick={() => setView('home')}
+              >
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-200">
+                  <Gamepad2 className="w-5 h-5 text-white" />
+                </div>
+                <span className="font-bold text-xl tracking-tight text-slate-900 uppercase italic">
+                  Game<span className="text-blue-600">Hub</span>
+                </span>
               </div>
-              <span className="font-bold text-xl tracking-tight text-slate-900 uppercase italic">
-                Game<span className="text-blue-600">Hub</span>
-              </span>
+
+              {/* Goon Corner Tab */}
+              <button 
+                onClick={() => setView('goon-corner')}
+                className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-200 select-none cursor-pointer flex items-center gap-1.5 border ${
+                  view === 'goon-corner'
+                    ? 'bg-amber-100 text-amber-800 border-amber-200 rotate-1 scale-105 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50 border-transparent'
+                }`}
+              >
+                <Flame className={`w-3.5 h-3.5 ${view === 'goon-corner' ? 'text-amber-600 fill-current' : 'text-slate-400'}`} />
+                <span>Goon Corner</span>
+              </button>
             </div>
 
             <div className="flex items-center gap-4">
@@ -506,6 +525,10 @@ function AppContent() {
                   <Leaderboard />
                 </div>
               </div>
+            </div>
+          ) : view === 'goon-corner' ? (
+            <div key="goon-corner" className="max-w-5xl mx-auto">
+              <GoonCorner />
             </div>
           ) : (
             <div

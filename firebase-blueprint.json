@@ -21,6 +21,10 @@
           "type": "number",
           "description": "Total number of games played"
         },
+        "footballStarsWins": {
+          "type": "number",
+          "description": "Total tournament or match wins in Football Stars"
+        },
         "lastLogin": {
           "type": "string",
           "format": "date-time",
@@ -28,12 +32,36 @@
         }
       },
       "required": ["username", "password"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Global application setting or synchronized state configuration.",
+      "type": "object",
+      "properties": {
+        "settingId": {
+          "type": "string",
+          "description": "The unique identifier of the setting element."
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Base64 or static url of the active goon portrait."
+        },
+        "password": {
+          "type": "string",
+          "description": "The shared password required to edit this configuration."
+        }
+      },
+      "required": ["photoUrl", "password"]
     }
   },
   "firestore": {
     "users/{userId}": {
       "schema": "User",
       "description": "Collection of users indexed by their unique username or auth UID."
+    },
+    "settings/{settingId}": {
+      "schema": "Setting",
+      "description": "Synchronized global settings resource, readable by everyone but secured via password validation."
     }
   }
 }

@@ -276,6 +276,15 @@ export const GAMES: Game[] = [
     isInternal: true
   },
   {
+    id: 'dummiesworldcup',
+    name: 'Dummies World Cup',
+    category: 'Arcade',
+    description: 'Wobble, kick, and overhead-tumble with floppy skeletal crash dummies in the ultimate head-to-head physics tourney!',
+    icon: Trophy,
+    systemCore: 'Verlet Ragdoll Dynamics v2.5',
+    isInternal: true
+  },
+  {
     id: 'starcatcher',
     name: 'Star Catcher',
     category: 'Arcade',

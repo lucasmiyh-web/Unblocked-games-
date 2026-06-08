@@ -2,5 +2,5 @@
   "name": "GameHub Survival",
   "description": "A high-performance gaming portal featuring internal survival and arcade systems.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
