@@ -46,6 +46,7 @@ import VoltRacing from './games/VoltRacing';
 import GhostProtocol from './games/GhostProtocol';
 import CryptoClimb from './games/CryptoClimb';
 import BasketballStars from './games/BasketballStars';
+import GeometryDash from './games/GeometryDash';
 import GenericGame from './components/GenericGame';
 import MathRevision from './components/MathRevision';
 import GoonCorner from './components/GoonCorner';
@@ -270,7 +271,8 @@ function AppContent() {
         )}
         
         <div className="w-full h-full">
-          {activeGame.id === 'hyperslither' ? <HyperSlither /> :
+          {activeGame.id === 'geometrydash' ? <GeometryDash /> :
+           activeGame.id === 'hyperslither' ? <HyperSlither /> :
            activeGame.id === 'cyberstack' ? <CyberStack /> :
            activeGame.id === 'neonrunner' ? <NeonRunner /> :
            activeGame.id === 'retrosnake' ? <RetroSnake /> :

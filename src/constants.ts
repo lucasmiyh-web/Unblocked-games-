@@ -51,6 +51,15 @@ export const CATEGORIES = ['All', 'Arcade', 'Survival', 'Strategy', 'Precision',
 
 export const GAMES: Game[] = [
   {
+    id: 'geometrydash',
+    name: 'Geometry Dash',
+    category: 'Precision',
+    description: 'Jump, fly, and flip your way through dangerous passages and spiky obstacles in a rhythmic neon world.',
+    icon: Triangle,
+    systemCore: 'Rhythmic Matrix v2.0',
+    isInternal: true
+  },
+  {
     id: 'hyperslither',
     name: 'HyperSlither.IO',
     category: 'Survival',
